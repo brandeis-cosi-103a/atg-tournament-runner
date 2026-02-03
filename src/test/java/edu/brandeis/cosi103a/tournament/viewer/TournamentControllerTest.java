@@ -22,11 +22,13 @@ class TournamentControllerTest {
 
     private TournamentController controller;
     private TournamentService service;
+    private TournamentExecutionService executionService;
 
     @BeforeEach
     void setUp() {
         service = new TournamentService(tempDir.toString(), new ObjectMapper());
-        controller = new TournamentController(service);
+        executionService = new TournamentExecutionService(tempDir.toString());
+        controller = new TournamentController(service, executionService, "", "");
     }
 
     @Test
