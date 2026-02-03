@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  * @param id   lowercase identifier derived from name
  * @param name display name
- * @param url  either a URL for network players, or "naive-money"/"action-heavy"/"random" for local bots
+ * @param url  either a URL for network players, or "big-money"/"tech-debt" for local players
  */
 public record PlayerConfig(
     @JsonProperty("id") String id,

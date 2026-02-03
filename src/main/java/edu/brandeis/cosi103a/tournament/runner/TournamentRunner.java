@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * <pre>
  * java -jar atg-tournament-runner.jar \
  *   /path/to/engine.jar com.example.MyEngine \
- *   --name spring-2026 --rounds 15 --games-per-table 50 \
+ *   --name spring-2026 --rounds 15 --games-per-player 12 \
  *   --output ./data \
  *   --player Alice=https://alice:8080 \
  *   --player NaiveMoney=naive-money \
@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  * docker run --rm -v $(pwd):/jars -v $(pwd)/results:/data \
  *   ghcr.io/brandeis-cosi-103a/atg-tournament-runner \
  *   /jars/my-engine.jar com.student.MyEngine \
- *   --name practice --rounds 3 --games-per-table 10 \
+ *   --name practice --rounds 3 --games-per-player 3 \
  *   --output /data \
  *   --player Student=https://my-player.azurewebsites.net \
  *   --player Bot1=naive-money \
@@ -78,6 +78,12 @@ public class TournamentRunner {
             Math.min(8, Math.max(4, Runtime.getRuntime().availableProcessors()))
         );
 
+        // Calculate games per player for balanced scheduling
+        int gamesPerPlayer = config.gamesPerPlayer() > 0
+            ? config.gamesPerPlayer()
+            : RoundGenerator.recommendedGamesPerPlayer(config.players().size());
+        int totalGamesPerRound = (config.players().size() * gamesPerPlayer) / 4;
+
         try {
             for (int round = 1; round <= config.rounds(); round++) {
                 // Resume support: skip existing rounds
@@ -89,16 +95,19 @@ public class TournamentRunner {
                 System.out.printf("Starting round %d/%d%n", round, config.rounds());
 
                 List<Card.Type> kingdomCards = RoundGenerator.selectKingdomCards();
-                List<List<PlayerConfig>> tables = RoundGenerator.shuffleIntoTables(config.players());
 
-                // Run tables in parallel
+                // Generate balanced 4-player games
+                List<List<PlayerConfig>> games = RoundGenerator.generateBalancedGames(
+                    config.players(), gamesPerPlayer);
+
+                // Run games in parallel batches
                 List<Future<MatchResult>> futures = new ArrayList<>();
-                for (int t = 0; t < tables.size(); t++) {
-                    final int tableNum = t + 1;
-                    final List<PlayerConfig> tablePlayers = tables.get(t);
+                for (int g = 0; g < games.size(); g++) {
+                    final int gameNum = g + 1;
+                    final List<PlayerConfig> gamePlayers = games.get(g);
                     futures.add(threadPool.submit(() ->
-                        tableExecutor.executeTable(tableNum, tablePlayers, kingdomCards,
-                            config.gamesPerTable(), config.maxTurns())
+                        tableExecutor.executeTable(gameNum, gamePlayers, kingdomCards,
+                            1, config.maxTurns()) // 1 game per match
                     ));
                 }
 
@@ -115,8 +124,8 @@ public class TournamentRunner {
                 RoundResult roundResult = new RoundResult(round, kingdomCardNames, matches);
                 writer.writeRound(roundResult);
 
-                System.out.printf("Round %d complete (%d tables, %d games each)%n",
-                    round, tables.size(), config.gamesPerTable());
+                System.out.printf("Round %d complete (%d games, %d per player)%n",
+                    round, totalGamesPerRound, gamesPerPlayer);
             }
         } finally {
             threadPool.shutdown();
@@ -133,7 +142,7 @@ public class TournamentRunner {
     static TournamentConfig parseArgs(String[] args) {
         String name = null;
         Integer rounds = null;
-        Integer gamesPerTable = null;
+        Integer gamesPerPlayer = null;
         int maxTurns = 100;
         List<PlayerConfig> players = new ArrayList<>();
 
@@ -141,7 +150,7 @@ public class TournamentRunner {
             switch (args[i]) {
                 case "--name" -> name = args[++i];
                 case "--rounds" -> rounds = Integer.parseInt(args[++i]);
-                case "--games-per-table" -> gamesPerTable = Integer.parseInt(args[++i]);
+                case "--games-per-player" -> gamesPerPlayer = Integer.parseInt(args[++i]);
                 case "--max-turns" -> maxTurns = Integer.parseInt(args[++i]);
                 case "--output" -> i++; // consumed but stored separately
                 case "--player" -> {
@@ -159,14 +168,26 @@ public class TournamentRunner {
             }
         }
 
-        if (name == null || rounds == null || gamesPerTable == null) {
-            throw new IllegalArgumentException("Missing required arguments: --name, --rounds, --games-per-table");
+        if (name == null || rounds == null) {
+            throw new IllegalArgumentException("Missing required arguments: --name, --rounds");
         }
-        if (players.size() < 3) {
-            throw new IllegalArgumentException("Need at least 3 players");
+        if (players.size() < 4) {
+            throw new IllegalArgumentException("Need at least 4 players for balanced 4-player games");
         }
 
-        return new TournamentConfig(name, rounds, gamesPerTable, maxTurns, players);
+        // Auto-calculate gamesPerPlayer if not specified
+        if (gamesPerPlayer == null) {
+            gamesPerPlayer = RoundGenerator.recommendedGamesPerPlayer(players.size());
+        }
+
+        // Validate that N * gamesPerPlayer is divisible by 4
+        if ((players.size() * gamesPerPlayer) % 4 != 0) {
+            throw new IllegalArgumentException(
+                "players * gamesPerPlayer must be divisible by 4. Got " +
+                players.size() + " * " + gamesPerPlayer + " = " + (players.size() * gamesPerPlayer));
+        }
+
+        return new TournamentConfig(name, rounds, gamesPerPlayer, maxTurns, players);
     }
 
     private static Path parseOutputDir(String[] args) {
@@ -188,10 +209,10 @@ public class TournamentRunner {
         System.err.println("Options:");
         System.err.println("  --name <name>              Tournament name (required)");
         System.err.println("  --rounds <n>               Number of rounds to play (required)");
-        System.err.println("  --games-per-table <n>      Games per table per round (required)");
+        System.err.println("  --games-per-player <n>     Games per player per round (auto-calculated if not specified)");
         System.err.println("  --output <dir>             Output directory (default: ./data)");
         System.err.println("  --max-turns <n>            Max turns per game (default: 100)");
-        System.err.println("  --player <Name>=<url>      Add a player (at least 3 required)");
+        System.err.println("  --player <Name>=<url>      Add a player (at least 4 required)");
         System.err.println();
         System.err.println("Player URLs:");
         System.err.println("  https://...                Network player URL");
@@ -202,8 +223,9 @@ public class TournamentRunner {
         System.err.println("Example:");
         System.err.println("  java -jar atg-tournament-runner.jar \\");
         System.err.println("    /path/to/engine.jar com.example.MyEngine \\");
-        System.err.println("    --name test --rounds 3 --games-per-table 10 \\");
+        System.err.println("    --name test --rounds 3 --games-per-player 12 \\");
         System.err.println("    --player Alice=https://alice.example.com \\");
+        System.err.println("    --player Bob=https://bob.example.com \\");
         System.err.println("    --player Bot1=naive-money \\");
         System.err.println("    --player Bot2=random");
     }

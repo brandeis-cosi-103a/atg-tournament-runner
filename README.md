@@ -51,7 +51,31 @@ If a game fails (engine error, player violation, timeout), all players in that g
 - **Your engine JAR** - a packaged JAR containing your `Engine` implementation
 - **Network player deployed** (optional) - if testing against your own player, it must be accessible via HTTP
 
-## Quick Start
+## Quick Start (Web UI - Recommended)
+
+Run tournaments with an easy-to-use web interface:
+
+```bash
+docker run --rm \
+  -p 8080:8080 \
+  -v $(pwd)/my-engine.jar:/app/engine.jar \
+  -v $(pwd)/data:/app/data \
+  -e TOURNAMENT_ENGINE_JAR=/app/engine.jar \
+  -e TOURNAMENT_ENGINE_CLASS=com.example.MyEngine \
+  ghcr.io/brandeis-cosi-103a/atg-tournament-runner
+```
+
+Then open **http://localhost:8080** in your browser to:
+1. Configure your tournament (name, rounds, games per table)
+2. Add players (network URLs or built-in bots)
+3. Click "Run Tournament" and track progress (rounds, games completed)
+4. View animated results playback automatically when complete
+
+**No complex CLI commands needed!**
+
+## Quick Start (CLI - Advanced)
+
+For automated scripts or CI/CD pipelines, use the command-line interface:
 
 ```bash
 docker run --rm \
@@ -67,7 +91,9 @@ docker run --rm \
   --player Bot3=random
 ```
 
-## Usage
+## CLI Usage (Advanced)
+
+For automation, scripting, or CI/CD integration, use the command-line interface:
 
 ```
 docker run --rm \
@@ -104,7 +130,7 @@ docker run --rm \
 | `action-heavy` | Built-in action-focused strategy bot |
 | `random` | Built-in random decision bot |
 
-## Usage Examples
+## CLI Usage Examples
 
 ### Testing against all bots
 
@@ -247,37 +273,42 @@ Completely random legal decisions:
 
 ## Viewing Results
 
-After running a tournament, you can view animated results with the built-in web viewer.
+### Web UI (Automatic)
 
-### Start the Viewer
+When using the web UI, you get automatic progress tracking and results playback:
+- **Progress tracking**: Live updates showing current round and games completed
+- **Auto-redirect**: Automatically opens the animated results viewer when finished
+- **Animated playback**: Watch TrueSkill ratings evolve game-by-game with playback controls
+- **TrueSkill ratings**: Tape file with ratings is generated automatically
 
-```bash
-# Option 1: Using Docker
-docker run --rm \
-  -v $(pwd)/results:/app/data \
-  -p 8081:8081 \
-  ghcr.io/brandeis-cosi-103a/atg-tournament-runner \
-  --view
+The tournament runs to completion, then plays back all results with full animation!
 
-# Option 2: Using Java directly
-java -cp target/atg-tournament-runner-*-shaded.jar \
-  edu.brandeis.cosi103a.tournament.viewer.TournamentViewerApplication \
-  --tournament.data-dir=./results
-```
+### CLI (Manual)
 
-Then open http://localhost:8081 in your browser.
+If you ran a tournament via CLI, you need to manually build the tape and start the viewer:
 
-### Building the Tape
-
-Before viewing, you need to build a `tape.json` file that contains the playback data with TrueSkill ratings:
-
+**1. Build the tape file:**
 ```bash
 java -cp target/atg-tournament-runner-*-shaded.jar \
   edu.brandeis.cosi103a.tournament.tape.TapeBuilder \
-  --tournament ./results/my-tournament
+  --tournament ./data/my-tournament
 ```
 
-This processes the raw round files and produces `tape.json` with running TrueSkill ratings for each game.
+This generates `tape.json` with TrueSkill ratings.
+
+**2. Start the viewer:**
+```bash
+# Using Docker
+docker run --rm \
+  -v $(pwd)/data:/app/data \
+  -p 8080:8080 \
+  ghcr.io/brandeis-cosi-103a/atg-tournament-runner
+
+# Using Java directly
+java -jar target/atg-tournament-runner-*-shaded.jar
+```
+
+Then open **http://localhost:8080** and select your tournament.
 
 ### Viewer Features
 
