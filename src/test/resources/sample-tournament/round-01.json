@@ -1,0 +1,25 @@
+{
+  "roundNumber": 1,
+  "kingdomCards": ["REFACTOR", "HACK"],
+  "matches": [{
+    "tableNumber": 1,
+    "playerIds": ["p1", "p2", "p3", "p4"],
+    "outcomes": [{
+      "gameIndex": 0,
+      "placements": [
+        {"playerId": "p1", "score": 24},
+        {"playerId": "p2", "score": 20},
+        {"playerId": "p3", "score": 18},
+        {"playerId": "p4", "score": 12}
+      ]
+    }, {
+      "gameIndex": 1,
+      "placements": [
+        {"playerId": "p4", "score": 30},
+        {"playerId": "p3", "score": 22},
+        {"playerId": "p2", "score": 15},
+        {"playerId": "p1", "score": 10}
+      ]
+    }]
+  }]
+}

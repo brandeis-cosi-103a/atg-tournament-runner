@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tournament Playback</title>
+  <link rel="stylesheet" href="/css/tournament.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">Back to tournaments</a>
+    <div class="playback-header">
+      <h1 id="title">Loading...</h1>
+      <div class="controls">
+        <button id="btn-r50x">⏪ 50x</button>
+        <button id="btn-r10x">⏪ 10x</button>
+        <button id="btn-r1x">⏪ 1x</button>
+        <button id="btn-pause" class="active">⏸</button>
+        <button id="btn-1x">1x ⏩</button>
+        <button id="btn-10x">10x ⏩</button>
+        <button id="btn-50x">50x ⏩</button>
+      </div>
+    </div>
+
+    <div class="timeline-wrap">
+      <div class="timeline" id="timeline">
+        <div class="timeline-progress" id="timeline-progress"></div>
+        <div class="timeline-markers" id="timeline-markers"></div>
+      </div>
+    </div>
+
+    <div class="info-overlay" id="info-overlay">
+      <div class="info-item">
+        <span class="info-label">Round</span>
+        <span class="info-value" id="info-round">-</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Game</span>
+        <span class="info-value" id="info-game">-</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Kingdom</span>
+        <span class="info-value" id="info-kingdom">-</span>
+      </div>
+    </div>
+
+    <div class="celebration hidden" id="celebration">
+      <div class="confetti-container" id="confetti"></div>
+      <div class="podium">
+        <div class="podium-place second">
+          <div class="podium-name" id="place-2-name">-</div>
+          <div class="podium-points" id="place-2-points">-</div>
+          <div class="podium-block">2</div>
+        </div>
+        <div class="podium-place first">
+          <div class="podium-name" id="place-1-name">-</div>
+          <div class="podium-points" id="place-1-points">-</div>
+          <div class="podium-block">1</div>
+        </div>
+        <div class="podium-place third">
+          <div class="podium-name" id="place-3-name">-</div>
+          <div class="podium-points" id="place-3-points">-</div>
+          <div class="podium-block">3</div>
+        </div>
+      </div>
+      <div class="dismiss-hint">Click anywhere to dismiss</div>
+    </div>
+
+    <div class="chart-area" id="chart-area"></div>
+  </div>
+
+  <script src="/js/bar-chart.js"></script>
+  <script src="/js/playback.js"></script>
+</body>
+</html>

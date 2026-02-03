@@ -1,0 +1,17 @@
+{
+  "roundNumber": 2,
+  "kingdomCards": ["CODE_REVIEW", "EVERGREEN_TEST"],
+  "matches": [{
+    "tableNumber": 1,
+    "playerIds": ["p1", "p2", "p3", "p4"],
+    "outcomes": [{
+      "gameIndex": 0,
+      "placements": [
+        {"playerId": "p2", "score": 28},
+        {"playerId": "p1", "score": 25},
+        {"playerId": "p4", "score": 16},
+        {"playerId": "p3", "score": 14}
+      ]
+    }]
+  }]
+}

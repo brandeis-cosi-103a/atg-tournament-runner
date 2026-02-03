@@ -1,0 +1,10 @@
+{
+  "name": "test-tourney",
+  "config": {"rounds": 2, "gamesPerTable": 2, "maxTurns": 100},
+  "players": [
+    {"id": "p1", "name": "Alice", "url": "http://alice:8080"},
+    {"id": "p2", "name": "Bob", "url": "http://bob:8080"},
+    {"id": "p3", "name": "Carol", "url": "http://carol:8080"},
+    {"id": "p4", "name": "Dave", "url": "http://dave:8080"}
+  ]
+}

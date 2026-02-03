@@ -245,6 +245,48 @@ Completely random legal decisions:
 - Ensure paths are absolute or use `$(pwd)` for the current directory
 - On Windows, you may need to adjust the volume mount syntax
 
+## Viewing Results
+
+After running a tournament, you can view animated results with the built-in web viewer.
+
+### Start the Viewer
+
+```bash
+# Option 1: Using Docker
+docker run --rm \
+  -v $(pwd)/results:/app/data \
+  -p 8081:8081 \
+  ghcr.io/brandeis-cosi-103a/atg-tournament-runner \
+  --view
+
+# Option 2: Using Java directly
+java -cp target/atg-tournament-runner-*-shaded.jar \
+  edu.brandeis.cosi103a.tournament.viewer.TournamentViewerApplication \
+  --tournament.data-dir=./results
+```
+
+Then open http://localhost:8081 in your browser.
+
+### Building the Tape
+
+Before viewing, you need to build a `tape.json` file that contains the playback data with TrueSkill ratings:
+
+```bash
+java -cp target/atg-tournament-runner-*-shaded.jar \
+  edu.brandeis.cosi103a.tournament.tape.TapeBuilder \
+  --tournament ./results/my-tournament
+```
+
+This processes the raw round files and produces `tape.json` with running TrueSkill ratings for each game.
+
+### Viewer Features
+
+- **Animated leaderboard**: Watch ratings evolve game-by-game
+- **Playback controls**: Play/pause, rewind, fast-forward (1x to 50x speed)
+- **Timeline scrubber**: Click anywhere to jump to a specific game
+- **Round markers**: Visual indicators of round boundaries
+- **Podium celebration**: Final standings at tournament end
+
 ## Important Notes
 
 - **You provide your own engine** - this tool does NOT include a reference engine
