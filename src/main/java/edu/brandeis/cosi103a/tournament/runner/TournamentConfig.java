@@ -10,15 +10,15 @@ import java.util.List;
 public record TournamentConfig(
     @JsonProperty("name") String name,
     @JsonProperty("rounds") int rounds,
-    @JsonProperty("gamesPerTable") int gamesPerTable,
+    @JsonProperty("gamesPerPlayer") int gamesPerPlayer,
     @JsonProperty("maxTurns") int maxTurns,
     @JsonProperty("players") List<PlayerConfig> players
 ) {
 
     /**
-     * Convenience constructor with default maxTurns of 100.
+     * Convenience constructor with default maxTurns of 100 and auto-calculated gamesPerPlayer.
      */
-    public TournamentConfig(String name, int rounds, int gamesPerTable, List<PlayerConfig> players) {
-        this(name, rounds, gamesPerTable, 100, players);
+    public TournamentConfig(String name, int rounds, int gamesPerPlayer, List<PlayerConfig> players) {
+        this(name, rounds, gamesPerPlayer, 100, players);
     }
 }

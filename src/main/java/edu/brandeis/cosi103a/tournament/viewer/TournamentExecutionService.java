@@ -56,8 +56,11 @@ public class TournamentExecutionService {
 
         // Calculate total expected games
         int playersCount = config.players().size();
-        int tablesPerRound = (playersCount + 3) / 4; // Approximate tables per round
-        int totalGames = config.rounds() * tablesPerRound * config.gamesPerTable();
+        int gamesPerPlayer = config.gamesPerPlayer() > 0
+            ? config.gamesPerPlayer()
+            : RoundGenerator.recommendedGamesPerPlayer(playersCount);
+        int gamesPerRound = (playersCount * gamesPerPlayer) / 4;
+        int totalGames = config.rounds() * gamesPerRound;
 
         // Initialize status as QUEUED
         TournamentStatus initialStatus = TournamentStatus.queued(tournamentId, config.rounds(), totalGames);
@@ -104,8 +107,11 @@ public class TournamentExecutionService {
         Path outputDir = dataDir.resolve(config.name());
         int completedGames = 0;
         int playersCount = config.players().size();
-        int tablesPerRound = (playersCount + 3) / 4;
-        int totalGames = config.rounds() * tablesPerRound * config.gamesPerTable();
+        int gamesPerPlayer = config.gamesPerPlayer() > 0
+            ? config.gamesPerPlayer()
+            : RoundGenerator.recommendedGamesPerPlayer(playersCount);
+        int gamesPerRound = (playersCount * gamesPerPlayer) / 4;
+        int totalGames = config.rounds() * gamesPerRound;
 
         try {
             // Initialize file writer and write metadata
@@ -134,22 +140,23 @@ public class TournamentExecutionService {
 
                     // Check if round already exists (resume support)
                     if (writer.roundExists(round)) {
-                        completedGames += tablesPerRound * config.gamesPerTable();
+                        completedGames += gamesPerRound;
                         continue;
                     }
 
-                    // Generate kingdom cards and tables
+                    // Generate kingdom cards and balanced games
                     List<Card.Type> kingdomCards = RoundGenerator.selectKingdomCards();
-                    List<List<PlayerConfig>> tables = RoundGenerator.shuffleIntoTables(config.players());
+                    List<List<PlayerConfig>> games = RoundGenerator.generateBalancedGames(
+                        config.players(), gamesPerPlayer);
 
-                    // Run tables in parallel
+                    // Run games in parallel
                     List<Future<MatchResult>> futures = new ArrayList<>();
-                    for (int t = 0; t < tables.size(); t++) {
-                        final int tableNum = t + 1;
-                        final List<PlayerConfig> tablePlayers = tables.get(t);
+                    for (int g = 0; g < games.size(); g++) {
+                        final int gameNum = g + 1;
+                        final List<PlayerConfig> gamePlayers = games.get(g);
                         futures.add(threadPool.submit(() ->
-                            tableExecutor.executeTable(tableNum, tablePlayers, kingdomCards,
-                                config.gamesPerTable(), config.maxTurns())
+                            tableExecutor.executeTable(gameNum, gamePlayers, kingdomCards,
+                                1, config.maxTurns()) // 1 game per match
                         ));
                     }
 
@@ -168,7 +175,7 @@ public class TournamentExecutionService {
                     writer.writeRound(roundResult);
 
                     // Update completed games count
-                    completedGames += tables.size() * config.gamesPerTable();
+                    completedGames += gamesPerRound;
 
                     // Update status after round completion
                     TournamentStatus updatedStatus = TournamentStatus.running(

@@ -33,7 +33,7 @@ public class RoundFileWriter {
             "name", config.name(),
             "config", Map.of(
                 "rounds", config.rounds(),
-                "gamesPerTable", config.gamesPerTable(),
+                "gamesPerPlayer", config.gamesPerPlayer(),
                 "maxTurns", config.maxTurns()
             ),
             "players", config.players()
