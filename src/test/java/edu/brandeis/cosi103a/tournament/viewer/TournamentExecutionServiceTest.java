@@ -5,6 +5,7 @@ import edu.brandeis.cosi103a.tournament.runner.TournamentConfig;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for TournamentExecutionService.
@@ -21,7 +23,8 @@ class TournamentExecutionServiceTest {
 
     @Test
     void testStartTournamentReturnsId(@TempDir Path tempDir) {
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString());
+        SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
 
         TournamentConfig config = new TournamentConfig(
             "test-tournament",
@@ -48,7 +51,8 @@ class TournamentExecutionServiceTest {
 
     @Test
     void testGetTournamentStatusReturnsInitialState(@TempDir Path tempDir) throws InterruptedException {
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString());
+        SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
 
         TournamentConfig config = new TournamentConfig(
             "test-tournament",
@@ -88,7 +92,8 @@ class TournamentExecutionServiceTest {
 
     @Test
     void testGetTournamentStatusReturnsEmptyForUnknownId(@TempDir Path tempDir) {
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString());
+        SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
 
         try {
             Optional<TournamentStatus> status = service.getTournamentStatus("unknown-id");

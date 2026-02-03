@@ -5,12 +5,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for TournamentController and TournamentService.
@@ -27,7 +29,8 @@ class TournamentControllerTest {
     @BeforeEach
     void setUp() {
         service = new TournamentService(tempDir.toString(), new ObjectMapper());
-        executionService = new TournamentExecutionService(tempDir.toString());
+        SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
+        executionService = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
         controller = new TournamentController(service, executionService, "", "");
     }
 

@@ -4,6 +4,7 @@ import edu.brandeis.cosi.atg.cards.Card;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.runner.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
@@ -20,6 +21,7 @@ public class TournamentExecutionService {
     private final Map<String, TournamentStatus> runningTournaments = new ConcurrentHashMap<>();
     private final ExecutorService executorService;
     private final Path dataDir;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * Progress listener callback interface for tournament execution.
@@ -28,8 +30,11 @@ public class TournamentExecutionService {
         void onProgress(TournamentStatus status);
     }
 
-    public TournamentExecutionService(@Value("${tournament.data-dir:./data}") String dataDir) {
+    public TournamentExecutionService(
+            @Value("${tournament.data-dir:./data}") String dataDir,
+            SimpMessagingTemplate messagingTemplate) {
         this.dataDir = Path.of(dataDir);
+        this.messagingTemplate = messagingTemplate;
         this.executorService = Executors.newFixedThreadPool(
             Math.max(2, Runtime.getRuntime().availableProcessors() / 2)
         );
@@ -60,6 +65,9 @@ public class TournamentExecutionService {
         if (progressListener != null) {
             progressListener.onProgress(initialStatus);
         }
+
+        // Send initial status via WebSocket
+        sendWebSocketUpdate(tournamentId, initialStatus);
 
         // Submit async task
         executorService.submit(() -> executeTournament(tournamentId, config, engineLoader, progressListener));
@@ -119,6 +127,9 @@ public class TournamentExecutionService {
                         progressListener.onProgress(runningStatus);
                     }
 
+                    // Send round start update via WebSocket
+                    sendWebSocketUpdate(tournamentId, runningStatus);
+
                     // Check if round already exists (resume support)
                     if (writer.roundExists(round)) {
                         completedGames += tablesPerRound * config.gamesPerTable();
@@ -165,6 +176,9 @@ public class TournamentExecutionService {
                     if (progressListener != null) {
                         progressListener.onProgress(updatedStatus);
                     }
+
+                    // Send round completion update via WebSocket
+                    sendWebSocketUpdate(tournamentId, updatedStatus);
                 }
             } finally {
                 threadPool.shutdown();
@@ -178,6 +192,9 @@ public class TournamentExecutionService {
             if (progressListener != null) {
                 progressListener.onProgress(completedStatus);
             }
+
+            // Send completion update via WebSocket
+            sendWebSocketUpdate(tournamentId, completedStatus);
 
         } catch (Exception e) {
             // Mark as failed with error message
@@ -193,6 +210,24 @@ public class TournamentExecutionService {
             if (progressListener != null) {
                 progressListener.onProgress(failedStatus);
             }
+
+            // Send failure update via WebSocket
+            sendWebSocketUpdate(tournamentId, failedStatus);
+        }
+    }
+
+    /**
+     * Sends a tournament status update via WebSocket to all subscribers.
+     *
+     * @param tournamentId the tournament ID
+     * @param status the current status to broadcast
+     */
+    private void sendWebSocketUpdate(String tournamentId, TournamentStatus status) {
+        try {
+            messagingTemplate.convertAndSend("/topic/tournaments/" + tournamentId, status);
+        } catch (Exception e) {
+            // Log error but don't fail tournament execution
+            System.err.println("Failed to send WebSocket update for tournament " + tournamentId + ": " + e.getMessage());
         }
     }
 
