@@ -10,6 +10,41 @@ This tool allows you to run practice tournaments for ATG (Automation: The Game).
 
 The tool runs multiple rounds of games, shuffling players into tables of 3-4, and outputs results in JSON format.
 
+## Tournament Format
+
+### Structure
+
+A tournament consists of multiple **rounds**. Each round:
+
+1. **Kingdom Selection**: 10 action cards are randomly selected from the 15 available types
+2. **Table Assignment**: Players are randomly shuffled into tables of 3-4 players
+3. **Games**: Each table plays N games (specified by `--games-per-table`) with the same kingdom and grouping
+4. **Recording**: Results are written to a round file
+
+Tables within a round run in parallel for efficiency.
+
+### Scoring
+
+Each game records the **final VP score** for every player. The output includes raw scores only - no rankings or ratings are computed by this tool.
+
+Example game outcome:
+```json
+{
+  "gameIndex": 0,
+  "placements": [
+    {"playerId": "alice", "score": 45},
+    {"playerId": "bot1", "score": 38},
+    {"playerId": "bot2", "score": 32}
+  ]
+}
+```
+
+To determine winners: sort by score descending. Ties are possible.
+
+### Error Handling
+
+If a game fails (engine error, player violation, timeout), all players in that game receive a score of 0 for that game.
+
 ## Prerequisites
 
 - **Docker** installed and running
@@ -114,10 +149,52 @@ Results are written to the output directory:
 └── ...
 ```
 
-Each round file contains:
-- Kingdom cards used for that round
-- Table assignments
-- Game outcomes with player placements and scores
+### tournament.json
+
+```json
+{
+  "name": "practice",
+  "config": {
+    "rounds": 3,
+    "gamesPerTable": 10,
+    "maxTurns": 100
+  },
+  "players": [
+    {"id": "alice", "name": "Alice", "url": "https://..."},
+    {"id": "bot1", "name": "Bot1", "url": "naive-money"}
+  ]
+}
+```
+
+### round-NN.json
+
+```json
+{
+  "roundNumber": 1,
+  "kingdomCards": ["REFACTOR", "CODE_REVIEW", "HACK", ...],
+  "matches": [
+    {
+      "tableNumber": 1,
+      "playerIds": ["alice", "bot1", "bot2"],
+      "outcomes": [
+        {
+          "gameIndex": 0,
+          "placements": [
+            {"playerId": "alice", "score": 45},
+            {"playerId": "bot1", "score": 38},
+            {"playerId": "bot2", "score": 32}
+          ]
+        },
+        ...
+      ]
+    }
+  ]
+}
+```
+
+### Resume Support
+
+If a tournament is interrupted, re-running with the same `--name` will skip rounds that already have output files and continue from where it left off.
 
 ## Bot Strategies
 
