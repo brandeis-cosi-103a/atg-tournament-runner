@@ -68,8 +68,8 @@ docker run --rm \
 Then open **http://localhost:8080** in your browser to:
 1. Configure your tournament (name, rounds, games per table)
 2. Add players (network URLs or built-in bots)
-3. Click "Run Tournament" and watch live progress
-4. View animated results automatically when complete
+3. Click "Run Tournament" and track progress (rounds, games completed)
+4. View animated results playback automatically when complete
 
 **No complex CLI commands needed!**
 
@@ -275,12 +275,13 @@ Completely random legal decisions:
 
 ### Web UI (Automatic)
 
-When using the web UI, results are automatically displayed after tournament completion:
-- **Live progress**: Watch rounds complete in real-time via WebSocket updates
-- **Auto-redirect**: Automatically opens the animated viewer when finished
+When using the web UI, you get automatic progress tracking and results playback:
+- **Progress tracking**: Live updates showing current round and games completed
+- **Auto-redirect**: Automatically opens the animated results viewer when finished
+- **Animated playback**: Watch TrueSkill ratings evolve game-by-game with playback controls
 - **TrueSkill ratings**: Tape file with ratings is generated automatically
 
-Simply run your tournament via the web UI and the results will appear automatically!
+The tournament runs to completion, then plays back all results with full animation!
 
 ### CLI (Manual)
 
