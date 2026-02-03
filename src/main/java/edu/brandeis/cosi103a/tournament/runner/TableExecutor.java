@@ -7,7 +7,7 @@ import edu.brandeis.cosi.atg.state.GameResult;
 import edu.brandeis.cosi.atg.state.PlayerResult;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.network.NetworkPlayer;
-import edu.brandeis.cosi103a.tournament.player.ActionLoverPlayer;
+import edu.brandeis.cosi103a.tournament.player.ActionHeavyPlayer;
 import edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer;
 import edu.brandeis.cosi103a.tournament.player.RandomPlayer;
 
@@ -92,7 +92,7 @@ public class TableExecutor {
     private Player createPlayer(PlayerConfig config) {
         return switch (config.url()) {
             case "naive-money" -> new NaiveBigMoneyPlayer(config.name());
-            case "action-lover" -> new ActionLoverPlayer(config.name());
+            case "action-heavy" -> new ActionHeavyPlayer(config.name());
             case "random" -> new RandomPlayer(config.name());
             default -> new NetworkPlayer(config.name(), config.url());
         };

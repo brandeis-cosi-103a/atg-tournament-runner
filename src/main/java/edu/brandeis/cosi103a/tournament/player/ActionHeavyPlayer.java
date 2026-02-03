@@ -11,7 +11,7 @@ import edu.brandeis.cosi.atg.player.Player;
 import edu.brandeis.cosi.atg.state.GameState;
 
 /**
- * A naive "action lover" bot for student practice.
+ * A naive "action-heavy" bot for student practice.
  *
  * Strategy:
  * - Buy phase: prioritize action cards over money cards
@@ -19,16 +19,16 @@ import edu.brandeis.cosi.atg.state.GameState;
  * - Money phase: play all money cards
  *
  * This bot is deliberately simple and uses basic heuristics.
- * It loves action cards but doesn't optimize their synergies.
+ * It prioritizes action cards but doesn't optimize their synergies.
  */
-public class ActionLoverPlayer implements Player {
+public class ActionHeavyPlayer implements Player {
     private final String name;
 
-    public ActionLoverPlayer() {
-        this("ActionLover");
+    public ActionHeavyPlayer() {
+        this("ActionHeavy");
     }
 
-    public ActionLoverPlayer(String name) {
+    public ActionHeavyPlayer(String name) {
         this.name = name;
     }
 

@@ -28,7 +28,7 @@ docker run --rm \
   --output /data \
   --player Student=https://my-player.azurewebsites.net \
   --player Bot1=naive-money \
-  --player Bot2=action-lover \
+  --player Bot2=action-heavy \
   --player Bot3=random
 ```
 
@@ -66,7 +66,7 @@ docker run --rm \
 |-------|-------------|
 | `https://...` | Network player URL |
 | `naive-money` | Built-in naive "big money" strategy bot |
-| `action-lover` | Built-in action-focused strategy bot |
+| `action-heavy` | Built-in action-focused strategy bot |
 | `random` | Built-in random decision bot |
 
 ## Usage Examples
@@ -82,7 +82,7 @@ docker run --rm \
   --name bot-test --rounds 5 --games-per-table 20 \
   --output /data \
   --player NaiveMoney=naive-money \
-  --player ActionLover=action-lover \
+  --player ActionHeavy=action-heavy \
   --player Random=random
 ```
 
@@ -98,7 +98,7 @@ docker run --rm \
   --output /data \
   --player MyPlayer=https://my-player.azurewebsites.net \
   --player Bot1=naive-money \
-  --player Bot2=action-lover \
+  --player Bot2=action-heavy \
   --player Bot3=random
 ```
 
@@ -129,7 +129,7 @@ A simple money-focused strategy:
 - Plays some action cards that provide money bonuses
 - No complex decision-making or expected value calculations
 
-### action-lover
+### action-heavy
 
 An action card enthusiast:
 - Prioritizes buying action cards over money

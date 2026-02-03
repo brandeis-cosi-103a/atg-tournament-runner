@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  *   --output ./data \
  *   --player Alice=https://alice:8080 \
  *   --player NaiveMoney=naive-money \
- *   --player ActionLover=action-lover \
+ *   --player ActionHeavy=action-heavy \
  *   --player Random=random
  * </pre>
  *
@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  *   --output /data \
  *   --player Student=https://my-player.azurewebsites.net \
  *   --player Bot1=naive-money \
- *   --player Bot2=action-lover \
+ *   --player Bot2=action-heavy \
  *   --player Bot3=random
  * </pre>
  */
@@ -196,7 +196,7 @@ public class TournamentRunner {
         System.err.println("Player URLs:");
         System.err.println("  https://...                Network player URL");
         System.err.println("  naive-money                Built-in naive money bot");
-        System.err.println("  action-lover               Built-in action-loving bot");
+        System.err.println("  action-heavy               Built-in action-focused bot");
         System.err.println("  random                     Built-in random bot");
         System.err.println();
         System.err.println("Example:");
