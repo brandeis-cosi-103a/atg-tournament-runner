@@ -1,8 +1,10 @@
 package edu.brandeis.cosi103a.tournament.viewer;
 
+import de.gesundkrank.jskills.GameInfo;
 import edu.brandeis.cosi.atg.cards.Card;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.runner.*;
+import edu.brandeis.cosi103a.tournament.tape.TapeBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -182,6 +184,13 @@ public class TournamentExecutionService {
                 }
             } finally {
                 threadPool.shutdown();
+            }
+
+            // Generate tape.json for playback viewer
+            try {
+                TapeBuilder.buildTape(outputDir, GameInfo.getDefaultGameInfo());
+            } catch (Exception tapeEx) {
+                System.err.println("Warning: Failed to build tape.json for tournament " + tournamentId + ": " + tapeEx.getMessage());
             }
 
             // Mark as completed
