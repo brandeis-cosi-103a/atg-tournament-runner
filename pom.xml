@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.github.brandeis-cosi-103a</groupId>
+  <artifactId>atg-tournament-runner</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>ATG Tournament Runner</name>
+  <description>Tournament runner for ATG (Automation: The Game) - runs tournaments with student engine JARs and network players</description>
+  <url>https://github.com/brandeis-cosi-103a/atg-tournament-runner</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Joe Delfino</name>
+      <email>jdelfino@brandeis.edu</email>
+      <organization>Brandeis University</organization>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/brandeis-cosi-103a/atg-tournament-runner.git</connection>
+    <developerConnection>scm:git:ssh://github.com:brandeis-cosi-103a/atg-tournament-runner.git</developerConnection>
+    <url>https://github.com/brandeis-cosi-103a/atg-tournament-runner</url>
+  </scm>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>24</maven.compiler.source>
+    <maven.compiler.target>24</maven.compiler.target>
+    <!-- TODO: Switch to Maven Central version when atg-api 2.5.2+ is published -->
+    <atg.version>2.5.2-SNAPSHOT</atg.version>
+    <guava.version>33.5.0-jre</guava.version>
+    <jackson.version>2.18.4</jackson.version>
+    <junit.version>5.14.1</junit.version>
+    <mockito.version>5.18.0</mockito.version>
+  </properties>
+
+  <dependencies>
+    <!-- TEMPORARY: Using local JAR until atg-api 2.5.2+ is published to Maven Central -->
+    <dependency>
+      <groupId>io.github.brandeis-cosi-103a</groupId>
+      <artifactId>atg-api</artifactId>
+      <version>${atg.version}</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/atg-api-2.5.2-SNAPSHOT.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-guava</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jdk8</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.1</version>
+        <configuration>
+          <source>24</source>
+          <target>24</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.4</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>edu.brandeis.cosi103a.tournament.runner.TournamentRunner</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>edu.brandeis.cosi103a.tournament.runner.TournamentRunner</mainClass>
+                </transformer>
+              </transformers>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>shaded</shadedClassifierName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
