@@ -5,6 +5,7 @@ import edu.brandeis.cosi.atg.cards.Card;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.runner.*;
 import edu.brandeis.cosi103a.tournament.tape.TapeBuilder;
+import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -250,6 +251,7 @@ public class TournamentExecutionService {
     /**
      * Shuts down the executor service. Call this when the application is shutting down.
      */
+    @PreDestroy
     public void shutdown() {
         executorService.shutdown();
         try {

@@ -128,6 +128,7 @@ public final class RoundGenerator {
         List<PlayerConfig> selected = new ArrayList<>();
         selected.add(eligible.get(0)); // Start with player who has fewest appearances
 
+        // First pass: try to add players with no existing pairings
         for (int i = 1; i < eligible.size() && selected.size() < 4; i++) {
             PlayerConfig candidate = eligible.get(i);
 
@@ -139,10 +140,20 @@ public final class RoundGenerator {
                 }
             }
 
-            // Accept if we need players or if pairings aren't too redundant
-            // (allow some redundancy to ensure we can always fill games)
-            if (selected.size() < 4) {
+            // Prefer candidates who haven't played with any selected players yet
+            if (existingPairings == 0) {
                 selected.add(candidate);
+            }
+        }
+
+        // Second pass: if we still need players, add anyone available
+        // (allows some pairing redundancy to ensure we can always fill games)
+        if (selected.size() < 4) {
+            for (int i = 1; i < eligible.size() && selected.size() < 4; i++) {
+                PlayerConfig candidate = eligible.get(i);
+                if (!selected.contains(candidate)) {
+                    selected.add(candidate);
+                }
             }
         }
 
