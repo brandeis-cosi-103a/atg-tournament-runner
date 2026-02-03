@@ -75,9 +75,9 @@ public class TournamentController {
             @Valid @RequestBody TournamentConfigRequest request) {
 
         // Validate input
-        if (request.players().size() < 3) {
+        if (request.players().size() < 4) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "At least 3 players are required"));
+                    .body(Map.of("error", "At least 4 players are required"));
         }
 
         // Check if engine is configured
@@ -98,7 +98,8 @@ public class TournamentController {
             TournamentConfig config = new TournamentConfig(
                     request.tournamentName(),
                     request.rounds(),
-                    request.gamesPerTable(),
+                    request.gamesPerPlayer(),
+                    100, // maxTurns default
                     playerConfigs
             );
 

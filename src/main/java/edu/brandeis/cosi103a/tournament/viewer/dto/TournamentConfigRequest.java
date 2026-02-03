@@ -14,6 +14,6 @@ import java.util.List;
 public record TournamentConfigRequest(
     @JsonProperty("tournamentName") @NotBlank String tournamentName,
     @JsonProperty("rounds") @Min(1) int rounds,
-    @JsonProperty("gamesPerTable") @Min(1) int gamesPerTable,
+    @JsonProperty("gamesPerPlayer") @Min(1) int gamesPerPlayer,
     @JsonProperty("players") @NotEmpty @Valid List<PlayerConfigRequest> players
 ) {}

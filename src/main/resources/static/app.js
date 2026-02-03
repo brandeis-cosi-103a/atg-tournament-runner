@@ -25,8 +25,9 @@
   const successMessage = document.getElementById('success-message');
   const submitBtn = document.getElementById('submit-btn');
 
-  // Initialize with 3 players
+  // Initialize with 4 players
   function init() {
+    addPlayer();
     addPlayer();
     addPlayer();
     addPlayer();
@@ -127,7 +128,7 @@
     // Collect form data
     const tournamentName = document.getElementById('tournament-name').value.trim();
     const rounds = parseInt(document.getElementById('rounds').value);
-    const gamesPerTable = parseInt(document.getElementById('games-per-table').value);
+    const gamesPerPlayer = parseInt(document.getElementById('games-per-player').value);
 
     // Collect players
     const players = [];
@@ -150,8 +151,8 @@
     });
 
     // Validate
-    if (players.length < 3) {
-      showError('At least 3 players are required');
+    if (players.length < 4) {
+      showError('At least 4 players are required');
       return;
     }
 
@@ -164,7 +165,7 @@
     const request = {
       tournamentName,
       rounds,
-      gamesPerTable,
+      gamesPerPlayer,
       players
     };
 
