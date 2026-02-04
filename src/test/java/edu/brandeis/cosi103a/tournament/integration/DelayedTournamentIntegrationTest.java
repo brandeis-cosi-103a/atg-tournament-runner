@@ -12,9 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import org.junit.jupiter.api.Disabled;
+
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -56,24 +57,25 @@ public class DelayedTournamentIntegrationTest {
     }
 
     @Test
-    // @Disabled("Requires reference engine JAR - enable manually for performance testing")
+    @Disabled("Requires reference engine JAR at /tmp/engine.jar - run manually for performance testing")
     void measureRealTournamentWithNetworkDelay(@TempDir Path tempDir) throws Exception {
         System.out.println("\n=== Real Tournament Performance Test ===\n");
 
         EngineLoader engineLoader = new EngineLoader(ENGINE_JAR, ENGINE_CLASS);
         SimpMessagingTemplate mockMessaging = mock(SimpMessagingTemplate.class);
 
-        // Tournament configuration: 16 players, 5 rounds
-        List<PlayerConfig> players = new java.util.ArrayList<>();
-        String[] strategies = {"naive-money", "random", "action-heavy", "naive-money"};
-        for (int i = 1; i <= 16; i++) {
-            players.add(new PlayerConfig("p" + i, "Player" + i, strategies[(i - 1) % 4]));
-        }
+        // Tournament configuration - adjust for performance testing
+        List<PlayerConfig> players = List.of(
+            new PlayerConfig("p1", "Player1", "naive-money"),
+            new PlayerConfig("p2", "Player2", "random"),
+            new PlayerConfig("p3", "Player3", "naive-money"),
+            new PlayerConfig("p4", "Player4", "action-heavy")
+        );
 
         TournamentConfig config = new TournamentConfig(
             "perf-test",
-            5,      // rounds
-            16,     // games per player per round (increased from 4)
+            1,      // rounds
+            4,      // games per player per round
             100,    // max turns
             players
         );
@@ -104,13 +106,13 @@ public class DelayedTournamentIntegrationTest {
         CountDownLatch completionLatch = new CountDownLatch(1);
 
         TournamentExecutionService service = withDelay
-            ? new TournamentExecutionService(dataDir.toString(), 64, messaging) {
+            ? new TournamentExecutionService(dataDir.toString(), 8, messaging) {
                 @Override
                 protected TableExecutor createTableExecutor(EngineLoader loader) {
                     return new DelayedTableExecutor(loader, MIN_DELAY_MS, MAX_DELAY_MS);
                 }
             }
-            : new TournamentExecutionService(dataDir.toString(), 64, messaging);
+            : new TournamentExecutionService(dataDir.toString(), 8, messaging);
 
         try {
             service.startTournament(config, engineLoader, status -> {
