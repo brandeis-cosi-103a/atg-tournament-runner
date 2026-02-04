@@ -162,7 +162,7 @@ public class TournamentRunner {
                     String playerName = spec.substring(0, eq);
                     String playerUrl = spec.substring(eq + 1);
                     String playerId = playerName.toLowerCase();
-                    players.add(new PlayerConfig(playerId, playerName, playerUrl));
+                    players.add(new PlayerConfig(playerId, playerName, playerUrl, false));
                 }
                 default -> throw new IllegalArgumentException("Unknown argument: " + args[i]);
             }

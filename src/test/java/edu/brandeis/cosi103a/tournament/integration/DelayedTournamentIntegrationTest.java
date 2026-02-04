@@ -66,10 +66,10 @@ public class DelayedTournamentIntegrationTest {
 
         // Tournament configuration - adjust for performance testing
         List<PlayerConfig> players = List.of(
-            new PlayerConfig("p1", "Player1", "naive-money"),
-            new PlayerConfig("p2", "Player2", "random"),
-            new PlayerConfig("p3", "Player3", "naive-money"),
-            new PlayerConfig("p4", "Player4", "action-heavy")
+            new PlayerConfig("p1", "Player1", "naive-money", false),
+            new PlayerConfig("p2", "Player2", "random", false),
+            new PlayerConfig("p3", "Player3", "naive-money", false),
+            new PlayerConfig("p4", "Player4", "action-heavy", false)
         );
 
         TournamentConfig config = new TournamentConfig(

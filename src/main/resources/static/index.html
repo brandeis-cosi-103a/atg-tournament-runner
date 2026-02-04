@@ -2,245 +2,163 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Create Tournament</title>
   <link rel="stylesheet" href="/css/tournament.css">
   <style>
     .form-container {
-      max-width: 700px;
+      max-width: 1000px;
       margin: 0 auto;
     }
-
+    h1 { margin-bottom: 0.75rem; }
+    .form-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
     .form-group {
-      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-
-    .form-label {
-      display: block;
+    .form-group label {
       color: #8899a6;
-      font-size: 0.875rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
+      font-size: 0.8rem;
+      white-space: nowrap;
     }
-
-    .form-input {
-      width: 100%;
+    .form-input, .select {
       background: #1a1f26;
       border: 1px solid #2f3640;
-      border-radius: 4px;
-      padding: 0.75rem;
+      border-radius: 3px;
+      padding: 0.4rem 0.5rem;
       color: #e7e9ea;
-      font-size: 1rem;
+      font-size: 0.85rem;
       font-family: inherit;
     }
-
-    .form-input:focus {
+    .form-input:focus, .select:focus {
       outline: none;
       border-color: #4a90d9;
     }
+    .form-input.narrow { width: 80px; }
+    .form-input.name-input { width: 200px; }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
+    /* Players table */
     .players-section {
       background: #1a1f26;
       border: 1px solid #2f3640;
-      border-radius: 8px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
+      border-radius: 4px;
+      padding: 0.5rem;
+      margin-bottom: 0.75rem;
     }
-
     .players-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
+      padding: 0.25rem 0.5rem;
+      border-bottom: 1px solid #2f3640;
+      margin-bottom: 0.5rem;
     }
-
     .players-title {
-      font-size: 1.125rem;
+      font-size: 0.9rem;
       color: #fff;
     }
-
-    .player-item {
+    .help-text {
+      color: #8899a6;
+      font-size: 0.7rem;
+    }
+    #players-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    #players-table th {
+      text-align: left;
+      color: #8899a6;
+      font-weight: normal;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-bottom: 1px solid #2f3640;
+    }
+    #players-table td {
+      padding: 0.25rem 0.5rem;
+      vertical-align: middle;
+    }
+    #players-table tr:hover {
+      background: #0f1419;
+    }
+    #players-table input, #players-table select {
       background: #0f1419;
       border: 1px solid #2f3640;
-      border-radius: 4px;
-      padding: 1rem;
-      margin-bottom: 0.75rem;
-      position: relative;
+      border-radius: 3px;
+      padding: 0.3rem 0.4rem;
+      color: #e7e9ea;
+      font-size: 0.85rem;
+      font-family: inherit;
     }
-
-    .player-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.75rem;
+    #players-table input:focus, #players-table select:focus {
+      outline: none;
+      border-color: #4a90d9;
     }
-
-    .player-number {
+    .player-name-input { width: 140px; }
+    .player-type-select { width: 130px; }
+    .player-url-input { width: 250px; }
+    .player-url-input:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .row-num {
       color: #4a90d9;
       font-weight: 600;
+      width: 30px;
+    }
+    .player-delay-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
     }
 
+    /* Buttons */
     .btn {
       background: #2f3640;
       border: 1px solid #3d4854;
       color: #e7e9ea;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
+      padding: 0.3rem 0.6rem;
+      border-radius: 3px;
       cursor: pointer;
-      font-size: 0.875rem;
-      transition: background 0.15s;
+      font-size: 0.8rem;
       font-family: inherit;
     }
-
-    .btn:hover {
-      background: #3d4854;
-    }
-
+    .btn:hover { background: #3d4854; }
+    .btn-sm { padding: 0.2rem 0.4rem; font-size: 0.75rem; }
+    .btn-danger { background: #c0392b; border-color: #c0392b; }
+    .btn-danger:hover { background: #a93226; }
     .btn-primary {
       background: #4a90d9;
       border-color: #4a90d9;
       font-weight: 600;
-      width: 100%;
-      padding: 0.875rem;
-      font-size: 1rem;
+      padding: 0.5rem 1.5rem;
+      font-size: 0.9rem;
     }
-
-    .btn-primary:hover {
-      background: #5a9ee5;
-    }
-
-    .btn-danger {
-      background: #e74c3c;
-      border-color: #e74c3c;
-      padding: 0.375rem 0.75rem;
-    }
-
-    .btn-danger:hover {
-      background: #c0392b;
-    }
-
-    .btn-secondary {
-      background: transparent;
-      border: 1px dashed #3d4854;
-      width: 100%;
-      padding: 0.75rem;
-    }
-
-    .btn-secondary:hover {
-      background: #1a1f26;
-      border-color: #4a90d9;
-    }
-
-    .select {
-      width: 100%;
-      background: #1a1f26;
-      border: 1px solid #2f3640;
-      border-radius: 4px;
-      padding: 0.75rem;
-      color: #e7e9ea;
-      font-size: 0.875rem;
-      font-family: inherit;
-      cursor: pointer;
-    }
-
-    .select:focus {
-      outline: none;
-      border-color: #4a90d9;
-    }
-
-    .progress-container {
-      display: none;
-      background: #1a1f26;
-      border: 1px solid #2f3640;
-      border-radius: 8px;
-      padding: 1.5rem;
-      margin-top: 1.5rem;
-    }
-
-    .progress-container.active {
-      display: block;
-    }
-
-    .progress-title {
-      font-size: 1.125rem;
-      color: #fff;
-      margin-bottom: 1rem;
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 32px;
-      background: #0f1419;
-      border: 1px solid #2f3640;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 1rem;
-      position: relative;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: #4a90d9;
-      transition: width 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 0.875rem;
-      font-weight: 600;
-    }
-
-    .progress-info {
-      color: #8899a6;
-      font-size: 0.875rem;
-      line-height: 1.6;
-    }
+    .btn-primary:hover { background: #5a9ee5; }
+    .add-row { margin-top: 0.5rem; }
 
     .error-message {
       background: #2c1517;
       border: 1px solid #e74c3c;
-      border-radius: 4px;
-      padding: 1rem;
+      border-radius: 3px;
+      padding: 0.5rem;
       color: #e74c3c;
-      margin-top: 1rem;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
     }
-
-    .success-message {
-      background: #1a2c1e;
-      border: 1px solid #27ae60;
-      border-radius: 4px;
-      padding: 1rem;
-      color: #27ae60;
-      margin-top: 1rem;
-    }
-
-    .help-text {
-      color: #8899a6;
-      font-size: 0.75rem;
-      margin-top: 0.25rem;
-    }
-
     .nav-links {
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.5rem;
     }
-
     .nav-links a {
       color: #4a90d9;
       text-decoration: none;
-      font-size: 0.875rem;
-      margin-right: 1rem;
+      font-size: 0.8rem;
     }
-
-    .nav-links a:hover {
-      text-decoration: underline;
-    }
+    .nav-links a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -253,65 +171,50 @@
       <h1>Create Tournament</h1>
 
       <form id="tournament-form">
-        <div class="form-group">
-          <label class="form-label" for="tournament-name">Tournament Name</label>
-          <input type="text" id="tournament-name" class="form-input" required
-                 placeholder="spring-2026-practice">
-          <div class="help-text">Use lowercase with hyphens (e.g., my-tournament-2026)</div>
-        </div>
-
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="rounds">Rounds</label>
-            <input type="number" id="rounds" class="form-input" value="15" min="1" required>
+            <label for="tournament-name">Name</label>
+            <input type="text" id="tournament-name" class="form-input name-input" required
+                   placeholder="spring-2026-practice" pattern="[a-z0-9-]+">
           </div>
-
           <div class="form-group">
-            <label class="form-label" for="games-per-player">Games per Player</label>
-            <input type="number" id="games-per-player" class="form-input" value="12" min="1" required>
+            <label for="rounds">Rounds</label>
+            <input type="number" id="rounds" class="form-input narrow" value="15" min="1" required>
           </div>
+          <div class="form-group">
+            <label for="games-per-player">Games/Player</label>
+            <input type="number" id="games-per-player" class="form-input narrow" value="12" min="1" required>
+          </div>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Run Tournament</button>
         </div>
 
         <div class="players-section">
           <div class="players-header">
-            <h3 class="players-title">Players</h3>
-            <span class="help-text">Minimum 4 players required</span>
+            <span class="players-title">Players</span>
+            <span class="help-text">Min 4 players</span>
           </div>
 
-          <div id="players-list"></div>
+          <table id="players-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>URL (if remote)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="players-tbody"></tbody>
+          </table>
 
-          <button type="button" id="add-player-btn" class="btn btn-secondary">
-            + Add Player
-          </button>
+          <button type="button" id="add-player-btn" class="btn add-row">+ Add Player</button>
         </div>
-
-        <button type="submit" class="btn btn-primary" id="submit-btn">
-          Run Tournament
-        </button>
       </form>
 
-      <div id="progress-container" class="progress-container">
-        <div class="progress-title">Tournament Progress</div>
-        <div class="progress-bar">
-          <div id="progress-fill" class="progress-fill" style="width: 0%">0%</div>
-        </div>
-        <div id="progress-info" class="progress-info"></div>
-      </div>
-
-      <div id="ratings-container" class="ratings-container" style="display: none;">
-        <h3>Live Ratings</h3>
-        <div id="ratings-leaderboard" class="ratings-leaderboard">
-          <!-- Dynamically populated -->
-        </div>
-      </div>
-
       <div id="error-message" style="display: none;" class="error-message"></div>
-      <div id="success-message" style="display: none;" class="success-message"></div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

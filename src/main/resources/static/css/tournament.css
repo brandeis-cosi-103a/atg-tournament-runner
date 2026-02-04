@@ -259,11 +259,33 @@ h1 {
   display: none;
 }
 
+/* Waiting to reveal state */
+.celebration .reveal-prompt {
+  font-size: 1.5rem;
+  color: #fff;
+  margin-bottom: 1rem;
+  animation: pulse 2s ease-in-out infinite;
+  z-index: 2;
+}
+
+
+.celebration.revealed .reveal-prompt {
+  display: none;
+}
+
 .dismiss-hint {
   margin-top: 2rem;
   color: #8899a6;
   font-size: 0.875rem;
   animation: pulse 2s ease-in-out infinite;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.celebration.revealed .dismiss-hint {
+  opacity: 1;
+  visibility: visible;
 }
 
 @keyframes pulse {
@@ -328,13 +350,17 @@ h1 {
   flex-direction: column;
   align-items: center;
   opacity: 0;
+}
+
+/* Animation only triggers when revealed */
+.celebration.revealed .podium-place {
   animation: slideUp 0.8s ease forwards;
 }
 
 /* Order: 3rd, then 2nd, then 1st */
-.podium-place.third { animation-delay: 0.3s; }
-.podium-place.second { animation-delay: 1.2s; }
-.podium-place.first { animation-delay: 2.1s; }
+.celebration.revealed .podium-place.third { animation-delay: 0.3s; }
+.celebration.revealed .podium-place.second { animation-delay: 1.2s; }
+.celebration.revealed .podium-place.first { animation-delay: 2.1s; }
 
 @keyframes slideUp {
   from {

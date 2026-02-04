@@ -107,57 +107,62 @@ public final class TapeBuilder {
                 // Step through game indices in order
                 List<Integer> sortedIndices = new ArrayList<>(gamesByIndex.keySet());
                 sortedIndices.sort(Comparator.naturalOrder());
+                int gamesInRound = sortedIndices.size();
 
                 for (int gameIndex : sortedIndices) {
                     List<List<Placement>> tablesForGame = gamesByIndex.get(gameIndex);
 
-                    // Apply TrueSkill sequentially for each game
+                    // Emit one event per table (per game)
+                    int tableNum = 0;
                     for (List<Placement> placements : tablesForGame) {
+                        tableNum++;
+
+                        // Apply TrueSkill for this single game
                         tracker.processGame(placements);
-                    }
 
-                    // Build event
-                    ObjectNode event = MAPPER.createObjectNode();
-                    event.put("seq", seq++);
-                    event.put("round", roundNumber);
-                    event.put("game", gameIndex);
-                    event.put("tables", tableCount);
+                        // Build event
+                        ObjectNode event = MAPPER.createObjectNode();
+                        event.put("seq", seq++);
+                        event.put("round", roundNumber);
+                        event.put("game", gameIndex);
+                        event.put("gamesInRound", gamesInRound);
+                        event.put("table", tableNum);
+                        event.put("tables", tableCount);
 
-                    ArrayNode kcArray = MAPPER.createArrayNode();
-                    kingdomCards.forEach(kcArray::add);
-                    event.set("kingdomCards", kcArray);
+                        ArrayNode kcArray = MAPPER.createArrayNode();
+                        kingdomCards.forEach(kcArray::add);
+                        event.set("kingdomCards", kcArray);
 
-                    // Include placements from all tables
-                    ArrayNode placementsArray = MAPPER.createArrayNode();
-                    for (List<Placement> placements : tablesForGame) {
+                        // Include placements from this table only
+                        ArrayNode placementsArray = MAPPER.createArrayNode();
                         for (Placement p : placements) {
                             ObjectNode pn = MAPPER.createObjectNode();
                             pn.put("id", p.playerId());
                             pn.put("score", p.score());
                             placementsArray.add(pn);
                         }
-                    }
-                    event.set("placements", placementsArray);
+                        event.set("placements", placementsArray);
 
-                    // Emit conservative rating (mu - 3*sigma) for display
-                    Map<String, Rating> ratings = tracker.getCurrentRatings();
-                    ObjectNode ratingsNode = MAPPER.createObjectNode();
-                    for (var entry : ratings.entrySet()) {
-                        double display = tracker.getConservativeRating(entry.getKey());
-                        ratingsNode.put(entry.getKey(),
-                                Math.round(display * 10.0) / 10.0);
-                    }
-                    event.set("ratings", ratingsNode);
+                        // Emit conservative rating (mu - 3*sigma) for display
+                        Map<String, Rating> ratings = tracker.getCurrentRatings();
+                        ObjectNode ratingsNode = MAPPER.createObjectNode();
+                        for (var entry : ratings.entrySet()) {
+                            double display = tracker.getConservativeRating(entry.getKey());
+                            ratingsNode.put(entry.getKey(),
+                                    Math.round(display * 10.0) / 10.0);
+                        }
+                        event.set("ratings", ratingsNode);
 
-                    // Emit cumulative placement points
-                    Map<String, Integer> points = tracker.getCurrentPoints();
-                    ObjectNode pointsNode = MAPPER.createObjectNode();
-                    for (var entry : points.entrySet()) {
-                        pointsNode.put(entry.getKey(), entry.getValue());
-                    }
-                    event.set("points", pointsNode);
+                        // Emit cumulative placement points
+                        Map<String, Integer> points = tracker.getCurrentPoints();
+                        ObjectNode pointsNode = MAPPER.createObjectNode();
+                        for (var entry : points.entrySet()) {
+                            pointsNode.put(entry.getKey(), entry.getValue());
+                        }
+                        event.set("points", pointsNode);
 
-                    events.add(event);
+                        events.add(event);
+                    }
                 }
             }
 

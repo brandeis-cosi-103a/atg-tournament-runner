@@ -1,9 +1,14 @@
 /**
- * Playback controller: loads tape.json, steps through events with animation.
+ * Playback controller: supports both live streaming and replay modes.
+ * - Live mode: receives events via WebSocket, controls disabled
+ * - Replay mode: loads tape.json, full playback controls
  */
 (function() {
   const params = new URLSearchParams(window.location.search);
   const tournamentName = params.get('t');
+  const tournamentId = params.get('id');
+  const playersParam = params.get('players');
+
   if (!tournamentName) {
     document.getElementById('title').textContent = 'No tournament specified';
     return;
@@ -13,11 +18,16 @@
   // State
   let tape = null;
   let currentIndex = -1;
-  let speed = 0;        // 0 = paused, negative = rewind, positive = forward
+  let speed = 0;
   let lastStepTime = 0;
   let celebrationShown = false;
+  let isLiveMode = !!tournamentId;
+  let liveEvents = [];
+  let livePlayers = [];
+  let stompClient = null;
+  let initialRating = 0;
 
-  // Speed buttons (negative = rewind)
+  // Speed buttons
   const speeds = [
     { id: 'btn-r50x', speed: -50 },
     { id: 'btn-r10x', speed: -10 },
@@ -30,11 +40,11 @@
 
   speeds.forEach(function(s) {
     document.getElementById(s.id).addEventListener('click', function() {
+      if (isLiveMode) return; // Disabled during live
       speed = s.speed;
       speeds.forEach(function(x) {
         document.getElementById(x.id).classList.toggle('active', x.speed === speed);
       });
-      // Just hide the celebration overlay, don't reset speed
       document.getElementById('celebration').classList.add('hidden');
       document.getElementById('confetti').innerHTML = '';
     });
@@ -42,7 +52,7 @@
 
   // Timeline click
   document.getElementById('timeline').addEventListener('click', function(e) {
-    if (!tape) return;
+    if (isLiveMode || !tape) return; // Disabled during live
     const rect = this.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
     const idx = Math.min(Math.max(Math.floor(pct * tape.events.length), 0), tape.events.length - 1);
@@ -50,37 +60,208 @@
     hideCelebration();
   });
 
-  // Load data
-  fetch('/api/tournaments/' + encodeURIComponent(tournamentName) + '/tape.json')
-    .then(function(res) {
-      if (!res.ok) throw new Error('Failed to load tape');
-      return res.json();
-    })
-    .then(function(data) {
-      tape = data;
-      initPlayback();
-    })
-    .catch(function(err) {
-      document.getElementById('title').textContent = 'Error: ' + err.message;
+  // Click celebration to reveal results, then dismiss
+  document.getElementById('celebration').addEventListener('click', function() {
+    var celebration = document.getElementById('celebration');
+    if (!celebration.classList.contains('revealed')) {
+      // First click: reveal results and start confetti
+      celebration.classList.add('revealed');
+      createConfetti();
+    } else {
+      // Second click: dismiss
+      hideCelebration();
+    }
+  });
+
+  // Start in appropriate mode
+  if (isLiveMode) {
+    startLiveMode();
+  } else {
+    startReplayMode();
+  }
+
+  /**
+   * Live mode: connect to WebSocket, receive updates in real-time
+   */
+  function startLiveMode() {
+    // Parse players from URL or fetch from status
+    if (playersParam) {
+      try {
+        livePlayers = JSON.parse(decodeURIComponent(playersParam));
+      } catch (e) {
+        livePlayers = [];
+      }
+    }
+
+    // Disable controls visually
+    setControlsEnabled(false);
+
+    // Show loading state
+    document.getElementById('info-round').textContent = '-';
+    document.getElementById('info-game').textContent = 'Connecting...';
+    document.getElementById('info-kingdom').textContent = '-';
+
+    // Connect to WebSocket
+    const socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    stompClient.connect({}, function() {
+      stompClient.subscribe('/topic/tournaments/' + tournamentId, function(message) {
+        handleLiveUpdate(JSON.parse(message.body));
+      });
+    }, function(error) {
+      console.error('WebSocket error:', error);
+      document.getElementById('info-game').textContent = 'Connection lost';
     });
 
-  function initPlayback() {
-    BarChart.init(document.getElementById('chart-area'), tape.players, 0);
+    // Initialize chart if we have players
+    if (livePlayers.length > 0) {
+      BarChart.init(document.getElementById('chart-area'), livePlayers, initialRating);
+      var ratings = {};
+      livePlayers.forEach(function(p) { ratings[p.id] = initialRating; });
+      BarChart.update(ratings, null);
+    }
+  }
 
-    // Build initial points (all zero)
-    var pts = {};
-    tape.players.forEach(function(p) { pts[p.id] = 0; });
-    BarChart.update(pts, null);
+  /**
+   * Handle a live tournament status update
+   */
+  function handleLiveUpdate(status) {
+    var state = status.state;
+    var ratings = status.ratings;
+    var currentRound = status.currentRound;
+    var totalRounds = status.totalRounds;
+    var completedGames = status.completedGames;
+    var totalGames = status.totalGames;
 
-    // Place round markers on timeline
+    // Initialize chart on first update with ratings (if not already done)
+    if (ratings && Object.keys(ratings).length > 0 && livePlayers.length === 0) {
+      livePlayers = Object.keys(ratings).map(function(id) {
+        return { id: id, name: id };
+      });
+      BarChart.init(document.getElementById('chart-area'), livePlayers, initialRating);
+    }
+
+    if (state === 'QUEUED') {
+      document.getElementById('info-round').textContent = '-';
+      document.getElementById('info-game').textContent = 'Queued...';
+      updateLiveTimeline(0);
+    } else if (state === 'RUNNING') {
+      document.getElementById('info-round').textContent = currentRound + ' / ' + totalRounds;
+      document.getElementById('info-game').textContent = completedGames + ' / ' + totalGames;
+      updateLiveTimeline(totalGames > 0 ? completedGames / totalGames : 0);
+      if (ratings) {
+        BarChart.update(ratings, null);
+      }
+    } else if (state === 'COMPLETED') {
+      document.getElementById('info-round').textContent = totalRounds;
+      document.getElementById('info-game').textContent = 'Complete!';
+      updateLiveTimeline(1);
+      if (ratings) {
+        BarChart.update(ratings, null);
+      }
+      if (stompClient) {
+        stompClient.disconnect();
+      }
+      // Transition to replay mode
+      transitionToReplayMode();
+    } else if (state === 'FAILED') {
+      document.getElementById('info-game').textContent = 'Failed: ' + (status.error || 'Unknown error');
+      if (stompClient) {
+        stompClient.disconnect();
+      }
+    }
+  }
+
+  /**
+   * Update timeline progress during live mode
+   */
+  function updateLiveTimeline(pct) {
+    document.getElementById('timeline-progress').style.width = (pct * 100) + '%';
+  }
+
+  /**
+   * Transition from live to replay mode after tournament completes
+   */
+  function transitionToReplayMode() {
+    isLiveMode = false;
+
+    // Load tape.json for replay
+    fetch('/api/tournaments/' + encodeURIComponent(tournamentName) + '/tape.json')
+      .then(function(res) {
+        if (!res.ok) throw new Error('Failed to load tape');
+        return res.json();
+      })
+      .then(function(data) {
+        tape = data;
+        enableReplayMode();
+      })
+      .catch(function(err) {
+        console.error('Failed to load tape for replay:', err);
+        // Still enable controls, just won't have replay
+        setControlsEnabled(true);
+      });
+  }
+
+  /**
+   * Enable replay mode with full controls
+   */
+  function enableReplayMode() {
+    setControlsEnabled(true);
+
+    // Re-init chart with tape data
+    initialRating = tape.scoring && tape.scoring.initial ? tape.scoring.initial : 0;
+    BarChart.init(document.getElementById('chart-area'), tape.players, initialRating);
+
+    // Build initial ratings
+    var ratings = {};
+    tape.players.forEach(function(p) { ratings[p.id] = initialRating; });
+    BarChart.update(ratings, null);
+
+    // Place round markers
     placeRoundMarkers();
 
-    // Start at the beginning
+    // Jump to end
+    currentIndex = tape.events.length - 1;
+    renderEvent(currentIndex);
+
+    // Show celebration
+    showCelebration();
+  }
+
+  /**
+   * Replay mode: load tape.json and enable full controls
+   */
+  function startReplayMode() {
+    fetch('/api/tournaments/' + encodeURIComponent(tournamentName) + '/tape.json')
+      .then(function(res) {
+        if (!res.ok) throw new Error('Failed to load tape');
+        return res.json();
+      })
+      .then(function(data) {
+        tape = data;
+        initPlayback();
+      })
+      .catch(function(err) {
+        document.getElementById('title').textContent = 'Error: ' + err.message;
+      });
+  }
+
+  function initPlayback() {
+    initialRating = tape.scoring && tape.scoring.initial ? tape.scoring.initial : 0;
+    BarChart.init(document.getElementById('chart-area'), tape.players, initialRating);
+
+    var ratings = {};
+    tape.players.forEach(function(p) { ratings[p.id] = initialRating; });
+    BarChart.update(ratings, null);
+
+    placeRoundMarkers();
+
     currentIndex = -1;
     celebrationShown = false;
     document.getElementById('timeline-progress').style.width = '0%';
 
-    // Start animation loop
     requestAnimationFrame(tick);
   }
 
@@ -103,7 +284,7 @@
   }
 
   function tick(timestamp) {
-    if (speed !== 0 && tape) {
+    if (!isLiveMode && speed !== 0 && tape) {
       var interval = 1000 / Math.abs(speed);
       if (timestamp - lastStepTime >= interval) {
         lastStepTime = timestamp;
@@ -132,20 +313,19 @@
   function stepBackward() {
     if (currentIndex <= 0) return;
     currentIndex--;
-    celebrationShown = false; // Reset when rewinding
+    celebrationShown = false;
     renderEvent(currentIndex);
   }
 
   function goToEvent(idx) {
     currentIndex = idx;
     if (idx < tape.events.length - 1) {
-      celebrationShown = false; // Reset when not at end
+      celebrationShown = false;
     }
     renderEvent(idx);
   }
 
   function formatCardName(name) {
-    // Convert "SPRINT_PLANNING" to "Sprint Planning"
     return name
       .toLowerCase()
       .split('_')
@@ -159,70 +339,81 @@
     var ev = tape.events[idx];
     if (!ev) return;
 
-    // Update timeline progress
     var pct = ((idx + 1) / tape.events.length) * 100;
     document.getElementById('timeline-progress').style.width = pct + '%';
 
-    // Update info overlay
     document.getElementById('info-round').textContent = ev.round;
-    document.getElementById('info-game').textContent = ev.game !== undefined ? ev.game : ev.seq;
+    var eventsInRound = (ev.gamesInRound || 1) * (ev.tables || 1);
+    var eventInRound = (ev.game || 0) * (ev.tables || 1) + (ev.table || 1);
+    document.getElementById('info-game').textContent = eventInRound + ' / ' + eventsInRound;
 
     if (ev.kingdomCards) {
       var formattedCards = ev.kingdomCards.map(formatCardName);
       document.getElementById('info-kingdom').textContent = formattedCards.join(', ');
     }
 
-    // All players who participated in any table this step
     var changedIds = ev.placements ? ev.placements.map(function(p) { return p.id; }) : null;
-
-    // Update bars with cumulative points
-    BarChart.update(ev.points, changedIds);
+    BarChart.update(ev.ratings, changedIds);
   }
 
-  // Click celebration to dismiss
-  document.getElementById('celebration').addEventListener('click', function() {
-    hideCelebration();
-  });
+  function setControlsEnabled(enabled) {
+    speeds.forEach(function(s) {
+      var btn = document.getElementById(s.id);
+      btn.disabled = !enabled;
+      if (!enabled) {
+        btn.classList.add('disabled');
+      } else {
+        btn.classList.remove('disabled');
+      }
+    });
+
+    var timeline = document.getElementById('timeline');
+    if (!enabled) {
+      timeline.classList.add('disabled');
+    } else {
+      timeline.classList.remove('disabled');
+    }
+  }
 
   function showCelebration() {
     if (!tape || tape.events.length === 0) return;
 
-    // Get final points from last event
     var finalEvent = tape.events[tape.events.length - 1];
-    var pts = finalEvent.points;
+    var ratings = finalEvent.ratings;
 
-    // Sort players by points descending
     var ranked = tape.players.slice().sort(function(a, b) {
-      return (pts[b.id] || 0) - (pts[a.id] || 0);
+      return (ratings[b.id] || 0) - (ratings[a.id] || 0);
     });
 
-    // Populate podium
     if (ranked[0]) {
       document.getElementById('place-1-name').textContent = ranked[0].name;
-      document.getElementById('place-1-points').textContent = pts[ranked[0].id] + ' pts';
+      document.getElementById('place-1-points').textContent = ratings[ranked[0].id].toFixed(1);
     }
     if (ranked[1]) {
       document.getElementById('place-2-name').textContent = ranked[1].name;
-      document.getElementById('place-2-points').textContent = pts[ranked[1].id] + ' pts';
+      document.getElementById('place-2-points').textContent = ratings[ranked[1].id].toFixed(1);
     }
     if (ranked[2]) {
       document.getElementById('place-3-name').textContent = ranked[2].name;
-      document.getElementById('place-3-points').textContent = pts[ranked[2].id] + ' pts';
+      document.getElementById('place-3-points').textContent = ratings[ranked[2].id].toFixed(1);
     }
 
-    document.getElementById('celebration').classList.remove('hidden');
-    createConfetti();
+    var celebration = document.getElementById('celebration');
+    celebration.classList.remove('hidden');
+    celebration.classList.remove('revealed');
   }
 
   function hideCelebration() {
-    document.getElementById('celebration').classList.add('hidden');
-    // Clear confetti
+    var celebration = document.getElementById('celebration');
+    celebration.classList.add('hidden');
+    celebration.classList.remove('revealed');
     document.getElementById('confetti').innerHTML = '';
-    // Pause playback
-    speed = 0;
-    speeds.forEach(function(x) {
-      document.getElementById(x.id).classList.toggle('active', x.speed === 0);
-    });
+    if (!isLiveMode) {
+      speed = 0;
+      speeds.forEach(function(x) {
+        document.getElementById(x.id).classList.toggle('active', x.speed === 0);
+      });
+    }
   }
 
   function createConfetti() {
@@ -244,4 +435,7 @@
       container.appendChild(confetti);
     }
   }
+
+  // Start animation loop
+  requestAnimationFrame(tick);
 })();

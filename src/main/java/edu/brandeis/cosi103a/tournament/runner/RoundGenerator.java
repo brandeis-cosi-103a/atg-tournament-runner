@@ -34,17 +34,17 @@ public final class RoundGenerator {
     }
 
     /**
-     * Generates balanced 4-player games where each player plays exactly the same number of games.
+     * Generates balanced 4-player games where each player plays approximately the same number of games.
      *
-     * For N players, each playing G games:
-     * - Total player-slots = N * G
-     * - Number of games = N * G / 4 (must be integer)
+     * For N players requesting G games each:
+     * - If N * G is divisible by 4, each player plays exactly G games
+     * - Otherwise, adjusts to the nearest valid configuration (within ±1 game per player)
      *
      * The algorithm greedily assigns players to games, prioritizing players with fewer
      * appearances and avoiding repeat opponents within the same round when possible.
      *
      * @param players list of players (minimum 4)
-     * @param gamesPerPlayer number of games each player should play (must make N*G divisible by 4)
+     * @param gamesPerPlayer target number of games each player should play
      * @return list of 4-player game assignments
      */
     public static List<List<PlayerConfig>> generateBalancedGames(List<PlayerConfig> players, int gamesPerPlayer) {
@@ -52,12 +52,10 @@ public final class RoundGenerator {
         if (n < 4) {
             throw new IllegalArgumentException("Need at least 4 players for 4-player games");
         }
-        if ((n * gamesPerPlayer) % 4 != 0) {
-            throw new IllegalArgumentException(
-                "N * gamesPerPlayer must be divisible by 4. Got " + n + " * " + gamesPerPlayer + " = " + (n * gamesPerPlayer));
-        }
 
-        int totalGames = (n * gamesPerPlayer) / 4;
+        // Adjust gamesPerPlayer to nearest valid value if needed
+        int adjustedGamesPerPlayer = adjustGamesPerPlayer(n, gamesPerPlayer);
+        int totalGames = (n * adjustedGamesPerPlayer) / 4;
         List<List<PlayerConfig>> games = new ArrayList<>();
 
         // Track how many games each player has been assigned
@@ -75,7 +73,7 @@ public final class RoundGenerator {
         Random random = new Random();
 
         for (int g = 0; g < totalGames; g++) {
-            List<PlayerConfig> game = selectPlayersForGame(players, appearances, pairedWith, gamesPerPlayer, random);
+            List<PlayerConfig> game = selectPlayersForGame(players, appearances, pairedWith, adjustedGamesPerPlayer, random);
             games.add(game);
 
             // Update tracking
@@ -174,6 +172,30 @@ public final class RoundGenerator {
             }
         }
         return 4; // fallback
+    }
+
+    /**
+     * Adjusts gamesPerPlayer to the nearest valid value where N * G is divisible by 4.
+     * Rounds to nearest valid value, preferring down when equidistant.
+     *
+     * For N players, valid G values are multiples of (4 / gcd(N, 4)).
+     *
+     * @param numPlayers number of players
+     * @param targetGamesPerPlayer requested games per player
+     * @return adjusted games per player that makes N * G divisible by 4
+     */
+    public static int adjustGamesPerPlayer(int numPlayers, int targetGamesPerPlayer) {
+        // Valid G must be a multiple of step = 4 / gcd(N, 4)
+        int gcd = gcd(numPlayers, 4);
+        int step = 4 / gcd;
+
+        // Round to nearest multiple of step (prefer down)
+        int adjusted = (targetGamesPerPlayer / step) * step;
+        return Math.max(adjusted, step); // ensure at least one valid value
+    }
+
+    private static int gcd(int a, int b) {
+        return b == 0 ? a : gcd(b, a % b);
     }
 
     /**

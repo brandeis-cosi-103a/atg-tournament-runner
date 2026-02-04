@@ -105,7 +105,18 @@ public class TournamentExecutionService {
     }
 
     /**
+     * Metadata for a submitted game task.
+     */
+    private record GameTask(int round, int gameNum, List<Card.Type> kingdomCards) {}
+
+    /**
+     * Result of a game with its metadata.
+     */
+    private record GameResultWithMeta(int round, MatchResult result, Set<String> kingdomCardNames) {}
+
+    /**
      * Internal method that executes the tournament in a background thread.
+     * All games across all rounds are submitted upfront for maximum parallelism.
      */
     private void executeTournament(String tournamentId, TournamentConfig config,
                                    EngineLoader engineLoader, ProgressListener progressListener) {
@@ -115,6 +126,7 @@ public class TournamentExecutionService {
         int gamesPerPlayer = config.gamesPerPlayer() > 0
             ? config.gamesPerPlayer()
             : RoundGenerator.recommendedGamesPerPlayer(playersCount);
+        gamesPerPlayer = RoundGenerator.adjustGamesPerPlayer(playersCount, gamesPerPlayer);
         int gamesPerRound = (playersCount * gamesPerPlayer) / 4;
         int totalGames = config.rounds() * gamesPerRound;
 
@@ -134,84 +146,124 @@ public class TournamentExecutionService {
                 .toList();
             TrueSkillTracker ratingsTracker = new TrueSkillTracker(playerIds, GameInfo.getDefaultGameInfo());
 
-            try {
-                for (int round = 1; round <= config.rounds(); round++) {
-                    // Update status to RUNNING
-                    TournamentStatus runningStatus = TournamentStatus.running(
-                        tournamentId, round, config.rounds(), completedGames, totalGames, null
-                    );
-                    runningTournaments.put(tournamentId, runningStatus);
-                    if (progressListener != null) {
-                        progressListener.onProgress(runningStatus);
-                    }
+            // Pre-generate all rounds' data and track which rounds to skip (resume support)
+            Map<Integer, List<Card.Type>> roundKingdomCards = new HashMap<>();
+            Map<Integer, List<List<PlayerConfig>>> roundGames = new HashMap<>();
+            Set<Integer> skippedRounds = new HashSet<>();
 
-                    // Send round start update via WebSocket
-                    sendWebSocketUpdate(tournamentId, runningStatus);
+            for (int round = 1; round <= config.rounds(); round++) {
+                if (writer.roundExists(round)) {
+                    skippedRounds.add(round);
+                    completedGames += gamesPerRound;
+                } else {
+                    roundKingdomCards.put(round, RoundGenerator.selectKingdomCards());
+                    roundGames.put(round, RoundGenerator.generateBalancedGames(config.players(), gamesPerPlayer));
+                }
+            }
 
-                    // Check if round already exists (resume support)
-                    if (writer.roundExists(round)) {
-                        completedGames += gamesPerRound;
-                        continue;
-                    }
+            // Send initial status
+            TournamentStatus initialStatus = TournamentStatus.running(
+                tournamentId, 1, config.rounds(), completedGames, totalGames, null
+            );
+            runningTournaments.put(tournamentId, initialStatus);
+            if (progressListener != null) {
+                progressListener.onProgress(initialStatus);
+            }
+            sendWebSocketUpdate(tournamentId, initialStatus);
 
-                    // Generate kingdom cards and balanced games
-                    List<Card.Type> kingdomCards = RoundGenerator.selectKingdomCards();
-                    List<List<PlayerConfig>> games = RoundGenerator.generateBalancedGames(
-                        config.players(), gamesPerPlayer);
+            // Submit ALL games from ALL rounds upfront
+            CompletionService<GameResultWithMeta> completionService =
+                new ExecutorCompletionService<>(threadPool);
 
-                    // Run games in parallel using CompletionService for incremental updates
-                    CompletionService<MatchResult> completionService =
-                        new ExecutorCompletionService<>(threadPool);
+            // Stagger initial submissions to achieve smooth completion rate.
+            // If games take ~T seconds and we have N threads, stagger by T/N.
+            // Assuming games take ~3 seconds, with 64 threads: 3000/64 ≈ 47ms
+            int staggerDelayMs = 50; // ms between submissions for first batch
 
-                    for (int g = 0; g < games.size(); g++) {
-                        final int gameNum = g + 1;
-                        final List<PlayerConfig> gamePlayers = games.get(g);
-                        completionService.submit(() ->
-                            tableExecutor.executeTable(gameNum, gamePlayers, kingdomCards,
-                                1, config.maxTurns()) // 1 game per match
-                        );
-                    }
+            int submittedGames = 0;
+            for (int round = 1; round <= config.rounds(); round++) {
+                if (skippedRounds.contains(round)) continue;
 
-                    // Collect results and send updates as each game completes
-                    List<MatchResult> matches = new ArrayList<>();
-                    for (int i = 0; i < games.size(); i++) {
-                        MatchResult result = completionService.take().get();
-                        matches.add(result);
+                List<Card.Type> kingdomCards = roundKingdomCards.get(round);
+                List<List<PlayerConfig>> games = roundGames.get(round);
+                Set<String> kingdomCardNames = new HashSet<>();
+                for (Card.Type card : kingdomCards) {
+                    kingdomCardNames.add(card.name());
+                }
 
-                        // Update ratings after each game (each match contains 1 game)
-                        if (!result.outcomes().isEmpty()) {
-                            ratingsTracker.processGame(result.outcomes().get(0).placements());
+                for (int g = 0; g < games.size(); g++) {
+                    final int roundNum = round;
+                    final int gameNum = g + 1;
+                    final List<PlayerConfig> gamePlayers = games.get(g);
+                    final List<Card.Type> kc = kingdomCards;
+                    final Set<String> kcNames = kingdomCardNames;
+
+                    completionService.submit(() -> {
+                        MatchResult result = tableExecutor.executeTable(gameNum, gamePlayers, kc,
+                            1, config.maxTurns());
+                        return new GameResultWithMeta(roundNum, result, kcNames);
+                    });
+                    submittedGames++;
+
+                    // Stagger first batch of submissions (one per thread)
+                    if (submittedGames <= gameThreadPoolSize) {
+                        try {
+                            Thread.sleep(staggerDelayMs);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
                         }
-                        completedGames++;
+                    }
+                }
+            }
 
-                        // Send WebSocket update with current ratings after EACH game
-                        Map<String, Double> currentRatings = buildRatingsMap(ratingsTracker);
-                        TournamentStatus status = TournamentStatus.running(
-                            tournamentId, round, config.rounds(), completedGames, totalGames, currentRatings
-                        );
-                        sendWebSocketUpdate(tournamentId, status);
+            // Track results per round for writing round files
+            Map<Integer, List<MatchResult>> roundResults = new HashMap<>();
+            Map<Integer, Integer> roundCompletedCount = new HashMap<>();
+            for (int round = 1; round <= config.rounds(); round++) {
+                if (!skippedRounds.contains(round)) {
+                    roundResults.put(round, new ArrayList<>());
+                    roundCompletedCount.put(round, 0);
+                }
+            }
+
+            // Process results as they complete (in any order)
+            int currentRoundForDisplay = skippedRounds.contains(1) ? 2 : 1;
+            try {
+                for (int i = 0; i < submittedGames; i++) {
+                    GameResultWithMeta gameResult = completionService.take().get();
+                    int round = gameResult.round();
+                    MatchResult result = gameResult.result();
+
+                    // Track result for round file
+                    roundResults.get(round).add(result);
+                    roundCompletedCount.merge(round, 1, Integer::sum);
+
+                    // Update ratings
+                    if (!result.outcomes().isEmpty()) {
+                        ratingsTracker.processGame(result.outcomes().get(0).placements());
+                    }
+                    completedGames++;
+
+                    // Update display round (show highest round with any progress)
+                    if (round > currentRoundForDisplay) {
+                        currentRoundForDisplay = round;
                     }
 
-                    // Write round results
-                    Set<String> kingdomCardNames = new HashSet<>();
-                    for (Card.Type card : kingdomCards) {
-                        kingdomCardNames.add(card.name());
-                    }
-                    RoundResult roundResult = new RoundResult(round, kingdomCardNames, matches);
-                    writer.writeRound(roundResult);
-
-                    // Update status after round completion (completedGames already incremented per-game)
+                    // Send WebSocket update
                     Map<String, Double> currentRatings = buildRatingsMap(ratingsTracker);
-                    TournamentStatus updatedStatus = TournamentStatus.running(
-                        tournamentId, round, config.rounds(), completedGames, totalGames, currentRatings
+                    TournamentStatus status = TournamentStatus.running(
+                        tournamentId, currentRoundForDisplay, config.rounds(), completedGames, totalGames, currentRatings
                     );
-                    runningTournaments.put(tournamentId, updatedStatus);
-                    if (progressListener != null) {
-                        progressListener.onProgress(updatedStatus);
-                    }
+                    sendWebSocketUpdate(tournamentId, status);
 
-                    // Send round completion update via WebSocket
-                    sendWebSocketUpdate(tournamentId, updatedStatus);
+                    // Write round file if round is complete
+                    int expectedGames = roundGames.get(round).size();
+                    if (roundCompletedCount.get(round) == expectedGames) {
+                        Set<String> kcNames = gameResult.kingdomCardNames();
+                        RoundResult roundResultObj = new RoundResult(round, kcNames, roundResults.get(round));
+                        writer.writeRound(roundResultObj);
+                    }
                 }
             } finally {
                 threadPool.shutdown();
@@ -238,6 +290,10 @@ public class TournamentExecutionService {
             sendWebSocketUpdate(tournamentId, completedStatus);
 
         } catch (Exception e) {
+            // Log the error for debugging
+            System.err.println("Tournament " + tournamentId + " failed: " + e.getMessage());
+            e.printStackTrace(System.err);
+
             // Mark as failed with error message
             TournamentStatus failedStatus = TournamentStatus.failed(
                 tournamentId,

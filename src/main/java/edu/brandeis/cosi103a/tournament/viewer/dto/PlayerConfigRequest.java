@@ -8,5 +8,6 @@ import jakarta.validation.constraints.NotBlank;
  */
 public record PlayerConfigRequest(
     @JsonProperty("name") @NotBlank String name,
-    @JsonProperty("url") @NotBlank String url
+    @JsonProperty("url") @NotBlank String url,
+    @JsonProperty("delay") boolean delay
 ) {}

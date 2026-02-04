@@ -22,3 +22,4 @@ Thumbs.db
 *.log
 results/
 dependency-reduced-pom.xml
+data/

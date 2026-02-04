@@ -85,13 +85,31 @@ class RoundGeneratorTest {
     }
 
     @Test
-    void generateBalancedGames_rejectsInvalidGamesPerPlayer() {
+    void generateBalancedGames_adjustsInvalidGamesPerPlayer() {
         List<PlayerConfig> players = createPlayers(5);
         int gamesPerPlayer = 3; // 5 * 3 = 15, not divisible by 4
 
-        assertThrows(IllegalArgumentException.class,
-            () -> RoundGenerator.generateBalancedGames(players, gamesPerPlayer),
-            "Should reject when N * gamesPerPlayer is not divisible by 4");
+        // Should adjust to 4 games per player (5 * 4 = 20, divisible by 4)
+        List<List<PlayerConfig>> games = RoundGenerator.generateBalancedGames(players, gamesPerPlayer);
+
+        // Verify games were generated (5 * 4 / 4 = 5 total games)
+        assertEquals(5, games.size());
+        assertTrue(games.stream().allMatch(g -> g.size() == 4));
+    }
+
+    @Test
+    void adjustGamesPerPlayer_returnsValidValue() {
+        // 9 players, 25 games -> should adjust to 24 (9 * 24 = 216, divisible by 4)
+        assertEquals(24, RoundGenerator.adjustGamesPerPlayer(9, 25));
+
+        // Already valid: 8 players, 3 games -> 8 * 3 = 24, divisible by 4
+        assertEquals(3, RoundGenerator.adjustGamesPerPlayer(8, 3));
+
+        // 5 players, 3 games -> 5 * 3 = 15, adjust to 4 (5 * 4 = 20)
+        assertEquals(4, RoundGenerator.adjustGamesPerPlayer(5, 3));
+
+        // 7 players, 10 games -> 7 * 10 = 70, adjust to 8 (7 * 8 = 56)
+        assertEquals(8, RoundGenerator.adjustGamesPerPlayer(7, 10));
     }
 
     @Test
@@ -170,7 +188,7 @@ class RoundGeneratorTest {
     private List<PlayerConfig> createPlayers(int count) {
         List<PlayerConfig> players = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            players.add(new PlayerConfig("player" + i, "Player" + i, "big-money"));
+            players.add(new PlayerConfig("player" + i, "Player" + i, "big-money", false));
         }
         return players;
     }
@@ -178,13 +196,13 @@ class RoundGeneratorTest {
     @Test
     void shuffleIntoTables_creates3or4PlayerTables() {
         List<PlayerConfig> players = List.of(
-            new PlayerConfig("a", "Alice", "big-money"),
-            new PlayerConfig("b", "Bob", "big-money"),
-            new PlayerConfig("c", "Charlie", "big-money"),
-            new PlayerConfig("d", "Diana", "big-money"),
-            new PlayerConfig("e", "Eve", "big-money"),
-            new PlayerConfig("f", "Frank", "big-money"),
-            new PlayerConfig("g", "Grace", "big-money")
+            new PlayerConfig("a", "Alice", "big-money", false),
+            new PlayerConfig("b", "Bob", "big-money", false),
+            new PlayerConfig("c", "Charlie", "big-money", false),
+            new PlayerConfig("d", "Diana", "big-money", false),
+            new PlayerConfig("e", "Eve", "big-money", false),
+            new PlayerConfig("f", "Frank", "big-money", false),
+            new PlayerConfig("g", "Grace", "big-money", false)
         );
         List<List<PlayerConfig>> tables = RoundGenerator.shuffleIntoTables(players);
         for (List<PlayerConfig> table : tables) {
@@ -199,9 +217,9 @@ class RoundGeneratorTest {
     @Test
     void shuffleIntoTables_exactlyThreePlayers() {
         List<PlayerConfig> players = List.of(
-            new PlayerConfig("a", "Alice", "big-money"),
-            new PlayerConfig("b", "Bob", "big-money"),
-            new PlayerConfig("c", "Charlie", "big-money")
+            new PlayerConfig("a", "Alice", "big-money", false),
+            new PlayerConfig("b", "Bob", "big-money", false),
+            new PlayerConfig("c", "Charlie", "big-money", false)
         );
         List<List<PlayerConfig>> tables = RoundGenerator.shuffleIntoTables(players);
         assertEquals(1, tables.size());
@@ -211,11 +229,11 @@ class RoundGeneratorTest {
     @Test
     void shuffleIntoTables_fivePlayers_twoTables() {
         List<PlayerConfig> players = List.of(
-            new PlayerConfig("a", "A", "big-money"),
-            new PlayerConfig("b", "B", "big-money"),
-            new PlayerConfig("c", "C", "big-money"),
-            new PlayerConfig("d", "D", "big-money"),
-            new PlayerConfig("e", "E", "big-money")
+            new PlayerConfig("a", "A", "big-money", false),
+            new PlayerConfig("b", "B", "big-money", false),
+            new PlayerConfig("c", "C", "big-money", false),
+            new PlayerConfig("d", "D", "big-money", false),
+            new PlayerConfig("e", "E", "big-money", false)
         );
         List<List<PlayerConfig>> tables = RoundGenerator.shuffleIntoTables(players);
         assertEquals(2, tables.size());

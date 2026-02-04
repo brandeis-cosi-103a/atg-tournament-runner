@@ -53,7 +53,7 @@ const BarChart = (function() {
 
       const rating = document.createElement('span');
       rating.className = 'bar-rating';
-      rating.textContent = initialRating.toFixed(0);
+      rating.textContent = initialRating.toFixed(1);
 
       bar.appendChild(label);
       bar.appendChild(rating);
@@ -97,7 +97,7 @@ const BarChart = (function() {
       const barWidth = Math.max(60, pct * (chartWidth - 60) + 60);
 
       p.bar.style.width = barWidth + 'px';
-      p.ratingEl.textContent = r.toFixed(0);
+      p.ratingEl.textContent = r.toFixed(1);
       p.rankEl.textContent = '#' + rankOf[id];
 
       // Glow effect for changed bars

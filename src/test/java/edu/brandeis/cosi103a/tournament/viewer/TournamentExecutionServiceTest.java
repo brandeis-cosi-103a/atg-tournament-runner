@@ -33,10 +33,10 @@ class TournamentExecutionServiceTest {
             4,
             100,
             List.of(
-                new PlayerConfig("p1", "Player1", "naive-money"),
-                new PlayerConfig("p2", "Player2", "action-heavy"),
-                new PlayerConfig("p3", "Player3", "random"),
-                new PlayerConfig("p4", "Player4", "naive-money")
+                new PlayerConfig("p1", "Player1", "naive-money", false),
+                new PlayerConfig("p2", "Player2", "action-heavy", false),
+                new PlayerConfig("p3", "Player3", "random", false),
+                new PlayerConfig("p4", "Player4", "naive-money", false)
             )
         );
 
@@ -67,10 +67,10 @@ class TournamentExecutionServiceTest {
             4,
             100,
             List.of(
-                new PlayerConfig("p1", "Player1", "naive-money"),
-                new PlayerConfig("p2", "Player2", "action-heavy"),
-                new PlayerConfig("p3", "Player3", "random"),
-                new PlayerConfig("p4", "Player4", "naive-money")
+                new PlayerConfig("p1", "Player1", "naive-money", false),
+                new PlayerConfig("p2", "Player2", "action-heavy", false),
+                new PlayerConfig("p3", "Player3", "random", false),
+                new PlayerConfig("p4", "Player4", "naive-money", false)
             )
         );
 
@@ -99,7 +99,7 @@ class TournamentExecutionServiceTest {
             assertEquals(0, status.currentRound());
             assertEquals(0, status.completedGames());
             assertTrue(status.totalGames() > 0);
-            assertFalse(status.error().isPresent());
+            assertNull(status.error());
 
             // Verify we can retrieve the status via the service
             Optional<TournamentStatus> retrievedStatus = service.getTournamentStatus(tournamentId);
@@ -134,10 +134,10 @@ class TournamentExecutionServiceTest {
             4,
             100,
             List.of(
-                new PlayerConfig("p1", "Player1", "naive-money"),
-                new PlayerConfig("p2", "Player2", "action-heavy"),
-                new PlayerConfig("p3", "Player3", "random"),
-                new PlayerConfig("p4", "Player4", "naive-money")
+                new PlayerConfig("p1", "Player1", "naive-money", false),
+                new PlayerConfig("p2", "Player2", "action-heavy", false),
+                new PlayerConfig("p3", "Player3", "random", false),
+                new PlayerConfig("p4", "Player4", "naive-money", false)
             )
         );
 
@@ -164,7 +164,7 @@ class TournamentExecutionServiceTest {
         assertEquals(5, queued.totalRounds());
         assertEquals(0, queued.completedGames());
         assertEquals(100, queued.totalGames());
-        assertFalse(queued.error().isPresent());
+        assertNull(queued.error());
 
         TournamentStatus running = TournamentStatus.running("id2", 3, 5, 50, 100, null);
         assertEquals(TournamentStatus.State.RUNNING, running.state());
@@ -178,7 +178,7 @@ class TournamentExecutionServiceTest {
 
         TournamentStatus failed = TournamentStatus.failed("id4", 2, 5, 30, 100, "Error occurred");
         assertEquals(TournamentStatus.State.FAILED, failed.state());
-        assertTrue(failed.error().isPresent());
-        assertEquals("Error occurred", failed.error().get());
+        assertNotNull(failed.error());
+        assertEquals("Error occurred", failed.error());
     }
 }

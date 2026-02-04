@@ -28,16 +28,27 @@ public class TournamentController {
     private final TournamentExecutionService executionService;
     private final String engineJarPath;
     private final String engineClassName;
+    private final boolean showDelayOption;
 
     public TournamentController(
             TournamentService tournamentService,
             TournamentExecutionService executionService,
             @Value("${tournament.engine-jar:}") String engineJarPath,
-            @Value("${tournament.engine-class:}") String engineClassName) {
+            @Value("${tournament.engine-class:}") String engineClassName,
+            @Value("${tournament.show-delay-option:false}") boolean showDelayOption) {
         this.tournamentService = tournamentService;
         this.executionService = executionService;
         this.engineJarPath = engineJarPath;
         this.engineClassName = engineClassName;
+        this.showDelayOption = showDelayOption;
+    }
+
+    /**
+     * Returns UI configuration options.
+     */
+    @GetMapping("/config")
+    public Map<String, Object> getConfig() {
+        return Map.of("showDelayOption", showDelayOption);
     }
 
     /**
@@ -71,7 +82,7 @@ public class TournamentController {
      * Returns 202 Accepted with tournament ID for tracking progress.
      */
     @PostMapping
-    public ResponseEntity<Map<String, String>> startTournament(
+    public ResponseEntity<Map<String, Object>> startTournament(
             @Valid @RequestBody TournamentConfigRequest request) {
 
         // Validate input
@@ -92,7 +103,8 @@ public class TournamentController {
                     .map(p -> new PlayerConfig(
                             generatePlayerId(p.name()),
                             p.name(),
-                            p.url()))
+                            p.url(),
+                            p.delay()))
                     .toList();
 
             TournamentConfig config = new TournamentConfig(
@@ -109,11 +121,14 @@ public class TournamentController {
             // Start tournament asynchronously
             String tournamentId = executionService.startTournament(config, engineLoader, null);
 
-            // Return 202 Accepted with tournament ID
-            Map<String, String> response = new HashMap<>();
+            // Return 202 Accepted with tournament ID and player info
+            Map<String, Object> response = new HashMap<>();
             response.put("tournamentId", tournamentId);
+            response.put("tournamentName", request.tournamentName());
             response.put("status", "ACCEPTED");
-            response.put("message", "Tournament queued for execution");
+            response.put("players", playerConfigs.stream()
+                    .map(p -> Map.of("id", p.id(), "name", p.name()))
+                    .toList());
 
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
 

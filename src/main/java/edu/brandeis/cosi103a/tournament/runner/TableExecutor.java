@@ -8,6 +8,7 @@ import edu.brandeis.cosi.atg.state.PlayerResult;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.network.NetworkPlayer;
 import edu.brandeis.cosi103a.tournament.player.ActionHeavyPlayer;
+import edu.brandeis.cosi103a.tournament.player.DelayedPlayerWrapper;
 import edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer;
 import edu.brandeis.cosi103a.tournament.player.RandomPlayer;
 
@@ -76,6 +77,9 @@ public class TableExecutor {
         List<Player> players = new ArrayList<>();
         for (PlayerConfig config : configs) {
             Player player = createPlayer(config);
+            if (config.delay()) {
+                player = new DelayedPlayerWrapper(player, 2, 5);
+            }
             nameToId.put(player.getName(), config.id());
             players.add(player);
         }

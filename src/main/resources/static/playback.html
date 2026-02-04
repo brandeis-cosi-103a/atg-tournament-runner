@@ -5,10 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tournament Playback</title>
   <link rel="stylesheet" href="/css/tournament.css">
+  <style>
+    .controls button.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .timeline.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <a href="/" class="back-link">Back to tournaments</a>
+    <a href="/" class="back-link">Back to Create Tournament</a>
     <div class="playback-header">
       <h1 id="title">Loading...</h1>
       <div class="controls">
@@ -46,6 +56,7 @@
 
     <div class="celebration hidden" id="celebration">
       <div class="confetti-container" id="confetti"></div>
+      <div class="reveal-prompt">Click to reveal results</div>
       <div class="podium">
         <div class="podium-place second">
           <div class="podium-name" id="place-2-name">-</div>
@@ -69,6 +80,8 @@
     <div class="chart-area" id="chart-area"></div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
   <script src="/js/bar-chart.js"></script>
   <script src="/js/playback.js"></script>
 </body>
