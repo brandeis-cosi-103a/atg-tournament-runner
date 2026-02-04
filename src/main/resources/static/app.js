@@ -1,12 +1,9 @@
 (function() {
   'use strict';
 
-  // Player type options: 3 built-ins + URL
-  const PLAYER_TYPES = [
-    { value: 'naive-money', label: 'Naive Money' },
-    { value: 'action-heavy', label: 'Action Heavy' },
-    { value: 'random', label: 'Random' },
-    { value: 'url', label: 'URL' }
+  // Player type options - populated from discovered players
+  let PLAYER_TYPES = [
+    { value: 'url', label: 'URL (Network Player)', description: '' }
   ];
 
   // State
@@ -22,15 +19,29 @@
 
   // Initialize
   async function init() {
-    // Fetch config to check for optional features
+    // Fetch config to check for optional features and discovered players
     try {
       const response = await fetch('/api/tournaments/config');
       if (response.ok) {
         const config = await response.json();
         showDelayOption = config.showDelayOption || false;
+
+        // Build player types from discovered players
+        if (config.discoveredPlayers && config.discoveredPlayers.length > 0) {
+          PLAYER_TYPES = config.discoveredPlayers
+            .filter(p => p.hasZeroArgConstructor || p.hasNameConstructor)
+            .map(p => ({
+              value: 'classpath:' + p.className,
+              label: p.displayName,
+              description: p.description || ''
+            }));
+          // Always add URL option at the end
+          PLAYER_TYPES.push({ value: 'url', label: 'URL (Network Player)', description: '' });
+        }
       }
     } catch (e) {
       // Ignore config fetch errors, use defaults
+      console.warn('Config fetch failed, using defaults:', e);
     }
 
     // Add delay column header if enabled
@@ -55,9 +66,13 @@
     const tr = document.createElement('tr');
     tr.dataset.playerId = playerId;
 
-    const typeOptions = PLAYER_TYPES.map(t =>
-      `<option value="${t.value}"${t.value === 'naive-money' ? ' selected' : ''}>${t.label}</option>`
-    ).join('');
+    // Get default selection (first player type)
+    const defaultValue = PLAYER_TYPES.length > 0 ? PLAYER_TYPES[0].value : 'url';
+
+    const typeOptions = PLAYER_TYPES.map((t, i) => {
+      const title = t.description ? ` title="${escapeHtml(t.description)}"` : '';
+      return `<option value="${t.value}"${i === 0 ? ' selected' : ''}${title}>${t.label}</option>`;
+    }).join('');
 
     let html = `
       <td class="row-num">${rowNum}</td>
@@ -85,6 +100,13 @@
     });
 
     playersTbody.appendChild(tr);
+  }
+
+  // Escape HTML to prevent XSS
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   // Remove a player row
@@ -136,7 +158,7 @@
           return;
         }
       } else {
-        url = type; // naive-money, action-heavy, or random
+        url = type; // local:alias or built-in alias
       }
 
       const delay = delayCheckbox ? delayCheckbox.checked : false;

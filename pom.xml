@@ -95,6 +95,12 @@
       <artifactId>jskills</artifactId>
       <version>1.1</version>
     </dependency>
+    <!-- Classpath scanning for Player discovery -->
+    <dependency>
+      <groupId>io.github.classgraph</groupId>
+      <artifactId>classgraph</artifactId>
+      <version>4.8.179</version>
+    </dependency>
     <!-- Spring Boot for web viewer -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

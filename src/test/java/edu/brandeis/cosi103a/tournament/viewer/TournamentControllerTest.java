@@ -1,6 +1,7 @@
 package edu.brandeis.cosi103a.tournament.viewer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.brandeis.cosi103a.tournament.runner.PlayerDiscoveryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,8 +31,9 @@ class TournamentControllerTest {
     void setUp() {
         service = new TournamentService(tempDir.toString(), new ObjectMapper());
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        executionService = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
-        controller = new TournamentController(service, executionService, "", "", false);
+        PlayerDiscoveryService discoveryService = new PlayerDiscoveryService();
+        executionService = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate, discoveryService);
+        controller = new TournamentController(service, executionService, discoveryService, "", "", false);
     }
 
     @Test

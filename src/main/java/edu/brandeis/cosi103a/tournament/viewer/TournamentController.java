@@ -1,9 +1,10 @@
 package edu.brandeis.cosi103a.tournament.viewer;
 
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
+import edu.brandeis.cosi103a.tournament.runner.DiscoveredPlayer;
 import edu.brandeis.cosi103a.tournament.runner.PlayerConfig;
+import edu.brandeis.cosi103a.tournament.runner.PlayerDiscoveryService;
 import edu.brandeis.cosi103a.tournament.runner.TournamentConfig;
-import edu.brandeis.cosi103a.tournament.viewer.dto.PlayerConfigRequest;
 import edu.brandeis.cosi103a.tournament.viewer.dto.TournamentConfigRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +27,7 @@ public class TournamentController {
 
     private final TournamentService tournamentService;
     private final TournamentExecutionService executionService;
+    private final PlayerDiscoveryService playerDiscoveryService;
     private final String engineJarPath;
     private final String engineClassName;
     private final boolean showDelayOption;
@@ -33,22 +35,35 @@ public class TournamentController {
     public TournamentController(
             TournamentService tournamentService,
             TournamentExecutionService executionService,
+            PlayerDiscoveryService playerDiscoveryService,
             @Value("${tournament.engine-jar:}") String engineJarPath,
             @Value("${tournament.engine-class:}") String engineClassName,
             @Value("${tournament.show-delay-option:false}") boolean showDelayOption) {
         this.tournamentService = tournamentService;
         this.executionService = executionService;
+        this.playerDiscoveryService = playerDiscoveryService;
         this.engineJarPath = engineJarPath;
         this.engineClassName = engineClassName;
         this.showDelayOption = showDelayOption;
     }
 
     /**
-     * Returns UI configuration options.
+     * Returns UI configuration options including discovered players.
      */
     @GetMapping("/config")
     public Map<String, Object> getConfig() {
-        return Map.of("showDelayOption", showDelayOption);
+        Map<String, Object> config = new HashMap<>();
+        config.put("showDelayOption", showDelayOption);
+        config.put("discoveredPlayers", playerDiscoveryService.getDiscoveredPlayers());
+        return config;
+    }
+
+    /**
+     * Returns all discovered Player implementations on the classpath.
+     */
+    @GetMapping("/players")
+    public List<DiscoveredPlayer> getDiscoveredPlayers() {
+        return playerDiscoveryService.getDiscoveredPlayers();
     }
 
     /**

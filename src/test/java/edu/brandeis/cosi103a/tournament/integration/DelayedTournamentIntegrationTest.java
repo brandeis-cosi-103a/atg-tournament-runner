@@ -3,6 +3,7 @@ package edu.brandeis.cosi103a.tournament.integration;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.player.DelayedPlayerWrapper;
 import edu.brandeis.cosi103a.tournament.runner.PlayerConfig;
+import edu.brandeis.cosi103a.tournament.runner.PlayerDiscoveryService;
 import edu.brandeis.cosi103a.tournament.runner.TableExecutor;
 import edu.brandeis.cosi103a.tournament.runner.TournamentConfig;
 import edu.brandeis.cosi103a.tournament.viewer.TournamentExecutionService;
@@ -66,10 +67,10 @@ public class DelayedTournamentIntegrationTest {
 
         // Tournament configuration - adjust for performance testing
         List<PlayerConfig> players = List.of(
-            new PlayerConfig("p1", "Player1", "naive-money", false),
-            new PlayerConfig("p2", "Player2", "random", false),
-            new PlayerConfig("p3", "Player3", "naive-money", false),
-            new PlayerConfig("p4", "Player4", "action-heavy", false)
+            new PlayerConfig("p1", "Player1", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false),
+            new PlayerConfig("p2", "Player2", "classpath:edu.brandeis.cosi103a.tournament.player.RandomPlayer", false),
+            new PlayerConfig("p3", "Player3", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false),
+            new PlayerConfig("p4", "Player4", "classpath:edu.brandeis.cosi103a.tournament.player.ActionHeavyPlayer", false)
         );
 
         TournamentConfig config = new TournamentConfig(
@@ -104,15 +105,16 @@ public class DelayedTournamentIntegrationTest {
     private void runTournament(Path dataDir, TournamentConfig config, EngineLoader engineLoader,
                                SimpMessagingTemplate messaging, boolean withDelay) throws Exception {
         CountDownLatch completionLatch = new CountDownLatch(1);
+        PlayerDiscoveryService discoveryService = new PlayerDiscoveryService();
 
         TournamentExecutionService service = withDelay
-            ? new TournamentExecutionService(dataDir.toString(), 8, messaging) {
+            ? new TournamentExecutionService(dataDir.toString(), 8, messaging, discoveryService) {
                 @Override
                 protected TableExecutor createTableExecutor(EngineLoader loader) {
                     return new DelayedTableExecutor(loader, MIN_DELAY_MS, MAX_DELAY_MS);
                 }
             }
-            : new TournamentExecutionService(dataDir.toString(), 8, messaging);
+            : new TournamentExecutionService(dataDir.toString(), 8, messaging, discoveryService);
 
         try {
             service.startTournament(config, engineLoader, status -> {

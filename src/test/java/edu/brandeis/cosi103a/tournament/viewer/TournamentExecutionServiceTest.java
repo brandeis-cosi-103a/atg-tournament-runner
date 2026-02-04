@@ -2,6 +2,7 @@ package edu.brandeis.cosi103a.tournament.viewer;
 
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.runner.PlayerConfig;
+import edu.brandeis.cosi103a.tournament.runner.PlayerDiscoveryService;
 import edu.brandeis.cosi103a.tournament.runner.TournamentConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,7 +26,7 @@ class TournamentExecutionServiceTest {
     @Test
     void testStartTournamentReturnsValidId(@TempDir Path tempDir) {
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate, new PlayerDiscoveryService());
 
         TournamentConfig config = new TournamentConfig(
             "test-tournament",
@@ -33,10 +34,10 @@ class TournamentExecutionServiceTest {
             4,
             100,
             List.of(
-                new PlayerConfig("p1", "Player1", "naive-money", false),
-                new PlayerConfig("p2", "Player2", "action-heavy", false),
-                new PlayerConfig("p3", "Player3", "random", false),
-                new PlayerConfig("p4", "Player4", "naive-money", false)
+                new PlayerConfig("p1", "Player1", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false),
+                new PlayerConfig("p2", "Player2", "classpath:edu.brandeis.cosi103a.tournament.player.ActionHeavyPlayer", false),
+                new PlayerConfig("p3", "Player3", "classpath:edu.brandeis.cosi103a.tournament.player.RandomPlayer", false),
+                new PlayerConfig("p4", "Player4", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false)
             )
         );
 
@@ -59,7 +60,7 @@ class TournamentExecutionServiceTest {
     @Test
     void testGetTournamentStatusReturnsInitialQueuedState(@TempDir Path tempDir) throws InterruptedException {
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate, new PlayerDiscoveryService());
 
         TournamentConfig config = new TournamentConfig(
             "test-tournament",
@@ -67,10 +68,10 @@ class TournamentExecutionServiceTest {
             4,
             100,
             List.of(
-                new PlayerConfig("p1", "Player1", "naive-money", false),
-                new PlayerConfig("p2", "Player2", "action-heavy", false),
-                new PlayerConfig("p3", "Player3", "random", false),
-                new PlayerConfig("p4", "Player4", "naive-money", false)
+                new PlayerConfig("p1", "Player1", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false),
+                new PlayerConfig("p2", "Player2", "classpath:edu.brandeis.cosi103a.tournament.player.ActionHeavyPlayer", false),
+                new PlayerConfig("p3", "Player3", "classpath:edu.brandeis.cosi103a.tournament.player.RandomPlayer", false),
+                new PlayerConfig("p4", "Player4", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false)
             )
         );
 
@@ -113,7 +114,7 @@ class TournamentExecutionServiceTest {
     @Test
     void testGetTournamentStatusReturnsEmptyForUnknownId(@TempDir Path tempDir) {
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate, new PlayerDiscoveryService());
 
         try {
             Optional<TournamentStatus> status = service.getTournamentStatus("unknown-id");
@@ -126,7 +127,7 @@ class TournamentExecutionServiceTest {
     @Test
     void testGetAllTournamentsReturnsRunningTournaments(@TempDir Path tempDir) {
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate, new PlayerDiscoveryService());
 
         TournamentConfig config = new TournamentConfig(
             "test-tournament",
@@ -134,10 +135,10 @@ class TournamentExecutionServiceTest {
             4,
             100,
             List.of(
-                new PlayerConfig("p1", "Player1", "naive-money", false),
-                new PlayerConfig("p2", "Player2", "action-heavy", false),
-                new PlayerConfig("p3", "Player3", "random", false),
-                new PlayerConfig("p4", "Player4", "naive-money", false)
+                new PlayerConfig("p1", "Player1", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false),
+                new PlayerConfig("p2", "Player2", "classpath:edu.brandeis.cosi103a.tournament.player.ActionHeavyPlayer", false),
+                new PlayerConfig("p3", "Player3", "classpath:edu.brandeis.cosi103a.tournament.player.RandomPlayer", false),
+                new PlayerConfig("p4", "Player4", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false)
             )
         );
 

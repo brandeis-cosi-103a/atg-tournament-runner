@@ -42,6 +42,12 @@ import java.util.stream.Collectors;
 public class TournamentRunner {
 
     public static void main(String[] args) {
+        // Check for --list-players before other args
+        if (args.length >= 1 && "--list-players".equals(args[0])) {
+            listPlayers();
+            System.exit(0);
+        }
+
         if (args.length < 2) {
             printUsage();
             System.exit(1);
@@ -61,7 +67,12 @@ public class TournamentRunner {
 
         try {
             EngineLoader engineLoader = new EngineLoader(engineJar, engineClass);
-            runTournament(config, outputDir, engineLoader);
+
+            // Create discovery service
+            PlayerDiscoveryService discoveryService = new PlayerDiscoveryService();
+            discoveryService.initialize();
+
+            runTournament(config, outputDir, engineLoader, discoveryService);
         } catch (Exception e) {
             System.err.println("Tournament failed: " + e.getMessage());
             e.printStackTrace();
@@ -69,11 +80,36 @@ public class TournamentRunner {
         }
     }
 
-    static void runTournament(TournamentConfig config, Path outputDir, EngineLoader engineLoader) throws Exception {
+    /**
+     * Lists discovered players from the classpath.
+     */
+    private static void listPlayers() {
+        PlayerDiscoveryService discoveryService = new PlayerDiscoveryService();
+        discoveryService.initialize();
+
+        List<DiscoveredPlayer> players = discoveryService.getDiscoveredPlayers();
+
+        if (players.isEmpty()) {
+            System.out.println("No players discovered on classpath.");
+            return;
+        }
+
+        System.out.println("Discovered players:");
+        System.out.println();
+        for (DiscoveredPlayer p : players) {
+            String desc = p.description().isEmpty() ? "" : " - " + p.description();
+            System.out.printf("  %-30s %s%s%n", p.displayName(), p.className(), desc);
+        }
+        System.out.println();
+        System.out.println("Use 'classpath:<class-name>' in --player arguments.");
+    }
+
+    static void runTournament(TournamentConfig config, Path outputDir, EngineLoader engineLoader,
+                               PlayerDiscoveryService discoveryService) throws Exception {
         RoundFileWriter writer = new RoundFileWriter(outputDir);
         writer.writeTournamentMetadata(config);
 
-        TableExecutor tableExecutor = new TableExecutor(engineLoader);
+        TableExecutor tableExecutor = new TableExecutor(engineLoader, discoveryService);
         ExecutorService threadPool = Executors.newFixedThreadPool(
             Math.min(8, Math.max(4, Runtime.getRuntime().availableProcessors()))
         );
@@ -201,6 +237,7 @@ public class TournamentRunner {
 
     private static void printUsage() {
         System.err.println("Usage: java -jar atg-tournament-runner.jar <engine-jar> <engine-class> [options]");
+        System.err.println("       java -jar atg-tournament-runner.jar --list-players");
         System.err.println();
         System.err.println("Arguments:");
         System.err.println("  <engine-jar>       Path to the JAR file containing the Engine implementation");
@@ -213,20 +250,21 @@ public class TournamentRunner {
         System.err.println("  --output <dir>             Output directory (default: ./data)");
         System.err.println("  --max-turns <n>            Max turns per game (default: 100)");
         System.err.println("  --player <Name>=<url>      Add a player (at least 4 required)");
+        System.err.println("  --list-players             List available players and exit");
         System.err.println();
         System.err.println("Player URLs:");
-        System.err.println("  https://...                Network player URL");
-        System.err.println("  naive-money                Built-in naive money bot");
-        System.err.println("  action-heavy               Built-in action-focused bot");
-        System.err.println("  random                     Built-in random bot");
+        System.err.println("  classpath:<class-name>           Player by class name (e.g., classpath:com.example.MyPlayer)");
+        System.err.println("  https://...                      Network player URL");
+        System.err.println();
+        System.err.println("Use --list-players to see available classpath players.");
         System.err.println();
         System.err.println("Example:");
         System.err.println("  java -jar atg-tournament-runner.jar \\");
         System.err.println("    /path/to/engine.jar com.example.MyEngine \\");
         System.err.println("    --name test --rounds 3 --games-per-player 12 \\");
         System.err.println("    --player Alice=https://alice.example.com \\");
-        System.err.println("    --player Bob=https://bob.example.com \\");
-        System.err.println("    --player Bot1=naive-money \\");
-        System.err.println("    --player Bot2=random");
+        System.err.println("    --player Bot1=classpath:com.example.BigMoneyPlayer \\");
+        System.err.println("    --player Bot2=classpath:com.example.RandomPlayer \\");
+        System.err.println("    --player Bot3=classpath:com.example.ActionPlayer");
     }
 }

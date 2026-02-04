@@ -26,6 +26,7 @@ public class TournamentExecutionService {
     private final ExecutorService executorService;
     private final Path dataDir;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PlayerDiscoveryService playerDiscoveryService;
     private final int gameThreadPoolSize;
 
     /**
@@ -38,10 +39,12 @@ public class TournamentExecutionService {
     public TournamentExecutionService(
             @Value("${tournament.data-dir:./data}") String dataDir,
             @Value("${tournament.game-thread-pool-size:64}") int gameThreadPoolSize,
-            SimpMessagingTemplate messagingTemplate) {
+            SimpMessagingTemplate messagingTemplate,
+            PlayerDiscoveryService playerDiscoveryService) {
         this.dataDir = Path.of(dataDir);
         this.gameThreadPoolSize = gameThreadPoolSize;
         this.messagingTemplate = messagingTemplate;
+        this.playerDiscoveryService = playerDiscoveryService;
         this.executorService = Executors.newFixedThreadPool(
             Math.max(2, Runtime.getRuntime().availableProcessors() / 2)
         );
@@ -351,7 +354,7 @@ public class TournamentExecutionService {
      * @return a TableExecutor instance
      */
     protected TableExecutor createTableExecutor(EngineLoader engineLoader) {
-        return new TableExecutor(engineLoader);
+        return new TableExecutor(engineLoader, playerDiscoveryService);
     }
 
     /**

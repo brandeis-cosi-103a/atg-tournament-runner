@@ -7,11 +7,9 @@ import edu.brandeis.cosi.atg.state.GameResult;
 import edu.brandeis.cosi.atg.state.PlayerResult;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.network.NetworkPlayer;
-import edu.brandeis.cosi103a.tournament.player.ActionHeavyPlayer;
 import edu.brandeis.cosi103a.tournament.player.DelayedPlayerWrapper;
-import edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer;
-import edu.brandeis.cosi103a.tournament.player.RandomPlayer;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,14 +21,27 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TableExecutor {
 
     private final EngineLoader engineLoader;
+    private final PlayerDiscoveryService discoveryService;
 
     /**
      * Creates a TableExecutor with the given engine loader.
+     * Uses no discovery service (backward compatibility for CLI mode).
      *
      * @param engineLoader the loader for creating Engine instances
      */
     public TableExecutor(EngineLoader engineLoader) {
+        this(engineLoader, null);
+    }
+
+    /**
+     * Creates a TableExecutor with the given engine loader and discovery service.
+     *
+     * @param engineLoader     the loader for creating Engine instances
+     * @param discoveryService the service for discovering classpath players (may be null)
+     */
+    public TableExecutor(EngineLoader engineLoader, PlayerDiscoveryService discoveryService) {
         this.engineLoader = engineLoader;
+        this.discoveryService = discoveryService;
     }
 
     /**
@@ -91,17 +102,59 @@ public class TableExecutor {
 
     /**
      * Creates a Player instance based on the configuration.
-     * Supports built-in bot aliases and network player URLs.
+     * Supports:
+     * <ul>
+     *   <li>Classpath players: classpath:com.example.MyPlayer</li>
+     *   <li>Network player URLs: https://...</li>
+     * </ul>
      *
      * @param config the player configuration
      * @return a Player instance
      */
     protected Player createPlayer(PlayerConfig config) {
-        return switch (config.url()) {
-            case "naive-money" -> new NaiveBigMoneyPlayer(config.name());
-            case "action-heavy" -> new ActionHeavyPlayer(config.name());
-            case "random" -> new RandomPlayer(config.name());
-            default -> new NetworkPlayer(config.name(), config.url());
-        };
+        String url = config.url();
+
+        // Handle classpath: scheme (full class name)
+        if (url.startsWith("classpath:")) {
+            String className = url.substring("classpath:".length());
+            return createFromClassName(className, config.name());
+        }
+
+        // Default: treat as network player URL
+        return new NetworkPlayer(config.name(), url);
+    }
+
+    private Player createFromClassName(String className, String playerName) {
+        // Try discovery service first if available
+        if (discoveryService != null) {
+            var discovered = discoveryService.findByClassName(className);
+            if (discovered.isPresent()) {
+                try {
+                    return discoveryService.createPlayer(discovered.get(), playerName);
+                } catch (ReflectiveOperationException e) {
+                    throw new RuntimeException("Failed to create player from " + className, e);
+                }
+            }
+        }
+
+        // Fall back to direct reflection
+        return createViaReflection(className, playerName);
+    }
+
+    private Player createViaReflection(String className, String playerName) {
+        try {
+            Class<?> playerClass = Class.forName(className);
+            // Try name constructor first
+            try {
+                Constructor<?> ctor = playerClass.getConstructor(String.class);
+                return (Player) ctor.newInstance(playerName);
+            } catch (NoSuchMethodException e) {
+                // Fall back to zero-arg
+                Constructor<?> ctor = playerClass.getConstructor();
+                return (Player) ctor.newInstance();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create player via reflection: " + className, e);
+        }
     }
 }
