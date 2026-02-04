@@ -38,8 +38,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>24</maven.compiler.source>
     <maven.compiler.target>24</maven.compiler.target>
-    <!-- TODO: Switch to Maven Central version when atg-api 2.5.2+ is published -->
-    <atg.version>2.5.2-SNAPSHOT</atg.version>
+    <atg.version>2.5.2</atg.version>
     <guava.version>33.5.0-jre</guava.version>
     <jackson.version>2.18.4</jackson.version>
     <junit.version>5.14.1</junit.version>
@@ -48,13 +47,10 @@
   </properties>
 
   <dependencies>
-    <!-- TEMPORARY: Using local JAR until atg-api 2.5.2+ is published to Maven Central -->
     <dependency>
       <groupId>io.github.brandeis-cosi-103a</groupId>
       <artifactId>atg-api</artifactId>
       <version>${atg.version}</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/atg-api-2.5.2-SNAPSHOT.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
