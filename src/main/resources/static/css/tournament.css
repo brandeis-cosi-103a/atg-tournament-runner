@@ -643,3 +643,39 @@ h1 {
   color: #8899a6;
   text-align: center;
 }
+
+.stats-table .score-cell {
+  white-space: nowrap;
+}
+
+.stats-table .score-avg {
+  font-weight: 600;
+  color: #e7e9ea;
+}
+
+.stats-table .score-range {
+  color: #8899a6;
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
+.stats-table .score-minmax {
+  display: block;
+  color: #6b7785;
+  font-size: 0.7rem;
+}
+
+.stats-table .winrate-cell {
+  white-space: nowrap;
+}
+
+.stats-table .winrate-value {
+  font-weight: 600;
+  color: #2ecc71;
+}
+
+.stats-table .podium-value {
+  display: block;
+  color: #8899a6;
+  font-size: 0.75rem;
+}

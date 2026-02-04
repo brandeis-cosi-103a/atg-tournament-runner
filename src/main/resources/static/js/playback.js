@@ -467,8 +467,10 @@
         name: p.name,
         games: 0,
         places: { 1: 0, 2: 0, 3: 0, 4: 0 },
+        scores: [],     // All scores for stdev calculation
         totalScore: 0,
-        bestScore: 0,
+        bestScore: -Infinity,
+        worstScore: Infinity,
         beatCount: {},  // Who this player beat (id -> count)
         lostCount: {}   // Who beat this player (id -> count)
       };
@@ -499,8 +501,10 @@
         if (!s) return;
 
         s.games++;
+        s.scores.push(p.score);
         s.totalScore += p.score;
         if (p.score > s.bestScore) s.bestScore = p.score;
+        if (p.score < s.worstScore) s.worstScore = p.score;
 
         // Cap place at 4 for display purposes
         var placeKey = Math.min(p.place, 4);
@@ -536,7 +540,32 @@
     // Convert to array and add computed fields
     var result = Object.values(stats).map(function(s) {
       s.rating = finalEvent.ratings[s.id] || 0;
-      s.avgScore = s.games > 0 ? (s.totalScore / s.games).toFixed(1) : 0;
+      s.avgScore = s.games > 0 ? (s.totalScore / s.games) : 0;
+
+      // Calculate stdev
+      if (s.games > 1) {
+        var mean = s.avgScore;
+        var sumSquaredDiff = s.scores.reduce(function(acc, score) {
+          var diff = score - mean;
+          return acc + diff * diff;
+        }, 0);
+        s.stdev = Math.sqrt(sumSquaredDiff / s.games);
+      } else {
+        s.stdev = 0;
+      }
+
+      // Win rate (1st place %)
+      s.winRate = s.games > 0 ? (s.places[1] / s.games * 100) : 0;
+
+      // Podium rate (top 3 %)
+      var podiumCount = s.places[1] + s.places[2] + s.places[3];
+      s.podiumRate = s.games > 0 ? (podiumCount / s.games * 100) : 0;
+
+      // Fix best/worst for players with no games
+      if (s.games === 0) {
+        s.bestScore = 0;
+        s.worstScore = 0;
+      }
 
       // Find most beaten opponent
       var maxBeat = { id: null, count: 0, name: '' };
@@ -584,7 +613,8 @@
     html += '<th>Rating</th>';
     html += '<th>Games</th>';
     html += '<th>Places</th>';
-    html += '<th>Avg Score</th>';
+    html += '<th>Score</th>';
+    html += '<th>Win %</th>';
     html += '<th>Rivalries</th>';
     html += '</tr></thead>';
     html += '<tbody>';
@@ -601,7 +631,15 @@
       if (s.places[3] > 0) html += '<span class="place-badge place-3">' + s.places[3] + '×3rd</span>';
       if (s.places[4] > 0) html += '<span class="place-badge place-4">' + s.places[4] + '×4th+</span>';
       html += '</td>';
-      html += '<td class="avg-score-cell">' + s.avgScore + '</td>';
+      html += '<td class="score-cell">';
+      html += '<span class="score-avg">' + s.avgScore.toFixed(1) + '</span>';
+      html += '<span class="score-range">±' + s.stdev.toFixed(1) + '</span>';
+      html += '<span class="score-minmax">' + s.worstScore + '–' + s.bestScore + '</span>';
+      html += '</td>';
+      html += '<td class="winrate-cell">';
+      html += '<span class="winrate-value">' + s.winRate.toFixed(0) + '%</span>';
+      html += '<span class="podium-value">🏆' + s.podiumRate.toFixed(0) + '%</span>';
+      html += '</td>';
       html += '<td class="rivalry-cell">';
       if (s.mostBeaten) {
         html += '<span class="rivalry-item rivalry-beat">▲ ' + escapeHtml(s.mostBeaten.name) + ' (' + s.mostBeaten.count + ')</span>';
