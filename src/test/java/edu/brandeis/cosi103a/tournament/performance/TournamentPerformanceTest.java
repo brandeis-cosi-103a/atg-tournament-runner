@@ -18,7 +18,7 @@ import java.util.List;
  *
  * This test compares:
  * - Baseline: Local players with no artificial delay
- * - Network simulation: Same players wrapped with 25-100ms delay per decision
+ * - Network simulation: Same players wrapped with 2-5ms delay per decision (realistic same-region latency)
  *
  * NOTE: This test is @Disabled by default because it requires a reference engine JAR.
  * To run it:
@@ -36,8 +36,8 @@ public class TournamentPerformanceTest {
     private static final int ROUNDS = 3;
     private static final int GAMES_PER_PLAYER = 4; // Reduced for faster testing
     private static final int NUM_RUNS = 3; // Multiple runs for averaging
-    private static final int MIN_DELAY_MS = 25;
-    private static final int MAX_DELAY_MS = 100;
+    private static final int MIN_DELAY_MS = 2;
+    private static final int MAX_DELAY_MS = 5;
 
     // Engine configuration - update these paths as needed
     private static final String ENGINE_JAR = "/tmp/engine.jar";
