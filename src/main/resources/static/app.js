@@ -66,8 +66,9 @@
     const tr = document.createElement('tr');
     tr.dataset.playerId = playerId;
 
-    // Get default selection (first player type)
-    const defaultValue = PLAYER_TYPES.length > 0 ? PLAYER_TYPES[0].value : 'url';
+    // Get default selection (first player type) and its label for default name
+    const defaultType = PLAYER_TYPES.length > 0 ? PLAYER_TYPES[0] : null;
+    const defaultName = defaultType && defaultType.value !== 'url' ? defaultType.label : `Player${rowNum}`;
 
     const typeOptions = PLAYER_TYPES.map((t, i) => {
       const title = t.description ? ` title="${escapeHtml(t.description)}"` : '';
@@ -76,7 +77,7 @@
 
     let html = `
       <td class="row-num">${rowNum}</td>
-      <td><input type="text" class="player-name-input" data-field="name" required value="Player${rowNum}"></td>
+      <td><input type="text" class="player-name-input" data-field="name" required value="${escapeHtml(defaultName)}"></td>
       <td><select class="player-type-select" data-field="type">${typeOptions}</select></td>
       <td><input type="url" class="player-url-input" data-field="url" placeholder="http://..." disabled></td>
     `;
@@ -92,11 +93,18 @@
     // Set up type change handler
     const typeSelect = tr.querySelector('[data-field="type"]');
     const urlInput = tr.querySelector('[data-field="url"]');
+    const nameInput = tr.querySelector('[data-field="name"]');
     typeSelect.addEventListener('change', () => {
       const isUrl = typeSelect.value === 'url';
       urlInput.disabled = !isUrl;
       urlInput.required = isUrl;
       if (!isUrl) urlInput.value = '';
+
+      // Update name to match selected player type
+      const selectedType = PLAYER_TYPES.find(t => t.value === typeSelect.value);
+      if (selectedType && selectedType.value !== 'url') {
+        nameInput.value = selectedType.label;
+      }
     });
 
     playersTbody.appendChild(tr);

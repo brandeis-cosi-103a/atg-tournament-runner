@@ -568,34 +568,39 @@
         s.worstScore = 0;
       }
 
-      // Find most beaten opponent
+      // Find most beaten opponent (exclude self)
       var maxBeat = { id: null, count: 0, name: '' };
       Object.keys(s.beatCount).forEach(function(oppId) {
-        if (s.beatCount[oppId] > maxBeat.count) {
+        if (oppId !== s.id && s.beatCount[oppId] > maxBeat.count) {
           maxBeat = { id: oppId, count: s.beatCount[oppId], name: playerMap[oppId] };
         }
       });
       s.mostBeaten = maxBeat.count > 0 ? maxBeat : null;
 
-      // Find most lost to opponent
+      // Find most lost to opponent (exclude self)
       var maxLost = { id: null, count: 0, name: '' };
       Object.keys(s.lostCount).forEach(function(oppId) {
-        if (s.lostCount[oppId] > maxLost.count) {
+        if (oppId !== s.id && s.lostCount[oppId] > maxLost.count) {
           maxLost = { id: oppId, count: s.lostCount[oppId], name: playerMap[oppId] };
         }
       });
       s.mostLostTo = maxLost.count > 0 ? maxLost : null;
 
-      // Get top cards from deckStats (excluding starting cards)
-      var startingCards = ['BITCOIN', 'METHOD'];
-      s.topCards = [];
+      // Get all cards from deckStats (excluding starting cards) with avg per game
+      var startingCards = ['BITCOIN', 'METHOD', 'BUG'];
+      s.allCards = [];
       if (tape.deckStats && tape.deckStats[s.id]) {
         var cardCounts = tape.deckStats[s.id];
-        var cards = Object.keys(cardCounts)
+        s.allCards = Object.keys(cardCounts)
           .filter(function(card) { return startingCards.indexOf(card) === -1; })
-          .map(function(card) { return { name: card, count: cardCounts[card] }; })
-          .sort(function(a, b) { return b.count - a.count; });
-        s.topCards = cards.slice(0, 3);
+          .map(function(card) {
+            return {
+              name: card,
+              total: cardCounts[card],
+              avgPerGame: s.games > 0 ? (cardCounts[card] / s.games) : 0
+            };
+          })
+          .sort(function(a, b) { return b.avgPerGame - a.avgPerGame; });
       }
 
       return s;
@@ -608,7 +613,7 @@
   }
 
   /**
-   * Build the statistics table HTML
+   * Build the statistics HTML using player cards
    */
   function buildStatsTableHtml() {
     var stats = calculateStats();
@@ -617,57 +622,79 @@
       return '<p style="color: #8899a6; text-align: center;">No statistics available</p>';
     }
 
-    var html = '<table class="stats-table">';
-    html += '<thead><tr>';
-    html += '<th class="rank-cell">#</th>';
-    html += '<th>Player</th>';
-    html += '<th>Rating</th>';
-    html += '<th>Games</th>';
-    html += '<th class="places-header"><span class="ph-1">1st</span><span class="ph-2">2nd</span><span class="ph-3">3rd</span><span class="ph-4">4th</span></th>';
-    html += '<th>Score</th>';
-    html += '<th>Top Cards</th>';
-    html += '<th>Rivalries</th>';
-    html += '</tr></thead>';
-    html += '<tbody>';
+    var html = '<div class="player-cards">';
 
     stats.forEach(function(s, idx) {
-      html += '<tr>';
-      html += '<td class="rank-cell">' + (idx + 1) + '</td>';
-      html += '<td class="name-cell" title="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</td>';
-      html += '<td class="rating-cell">' + s.rating.toFixed(1) + '</td>';
-      html += '<td class="games-cell">' + s.games + '</td>';
-      html += '<td class="places-cell">';
-      html += '<span class="place-count place-1st">' + s.places[1] + '</span>';
-      html += '<span class="place-count place-2nd">' + s.places[2] + '</span>';
-      html += '<span class="place-count place-3rd">' + s.places[3] + '</span>';
-      html += '<span class="place-count place-4th">' + s.places[4] + '</span>';
-      html += '</td>';
-      html += '<td class="score-cell">';
-      html += '<span class="score-avg">' + s.avgScore.toFixed(1) + '</span>';
-      html += '<span class="score-range">±' + s.stdev.toFixed(1) + '</span>';
-      html += '<span class="score-minmax">' + s.worstScore + '–' + s.bestScore + '</span>';
-      html += '</td>';
-      html += '<td class="topcards-cell">';
-      if (s.topCards.length > 0) {
-        s.topCards.forEach(function(card) {
-          html += '<span class="card-badge" title="' + card.count + ' total">' + formatCardName(card.name) + '</span>';
-        });
-      } else {
-        html += '<span class="no-data">—</span>';
-      }
-      html += '</td>';
-      html += '<td class="rivalry-cell">';
+      var rank = idx + 1;
+      var medalClass = rank <= 3 ? 'medal-' + rank : '';
+
+      html += '<div class="player-card ' + medalClass + '">';
+
+      // Header with rank, name, rating
+      html += '<div class="player-card-header">';
+      html += '<span class="player-rank">#' + rank + '</span>';
+      html += '<span class="player-name">' + escapeHtml(s.name) + '</span>';
+      html += '<span class="player-rating">' + s.rating.toFixed(1) + '</span>';
+      html += '</div>';
+
+      // Stats row: games and placements
+      html += '<div class="player-card-stats">';
+      html += '<div class="stat-group">';
+      html += '<span class="stat-label">Games</span>';
+      html += '<span class="stat-value">' + s.games + '</span>';
+      html += '</div>';
+      html += '<div class="stat-group placements">';
+      html += '<span class="stat-label">Finishes</span>';
+      html += '<span class="stat-value">';
+      html += '<span class="place-1st">' + s.places[1] + '</span>';
+      html += '<span class="place-2nd">' + s.places[2] + '</span>';
+      html += '<span class="place-3rd">' + s.places[3] + '</span>';
+      html += '<span class="place-4th">' + s.places[4] + '</span>';
+      html += '</span>';
+      html += '</div>';
+      html += '</div>';
+
+      // Rivalries section
+      html += '<div class="player-card-section">';
+      html += '<div class="section-title">Rivalries</div>';
       if (s.mostBeaten) {
-        html += '<span class="rivalry-item rivalry-beat">▲ ' + escapeHtml(s.mostBeaten.name) + ' (' + s.mostBeaten.count + ')</span>';
+        html += '<div class="rivalry-row">';
+        html += '<span class="rivalry-label">Beats most often:</span>';
+        html += '<span class="rivalry-value rivalry-win">' + escapeHtml(s.mostBeaten.name) + ' (' + s.mostBeaten.count + ' times)</span>';
+        html += '</div>';
       }
       if (s.mostLostTo) {
-        html += '<span class="rivalry-item rivalry-lost">▼ ' + escapeHtml(s.mostLostTo.name) + ' (' + s.mostLostTo.count + ')</span>';
+        html += '<div class="rivalry-row">';
+        html += '<span class="rivalry-label">Beaten most often by:</span>';
+        html += '<span class="rivalry-value rivalry-loss">' + escapeHtml(s.mostLostTo.name) + ' (' + s.mostLostTo.count + ' times)</span>';
+        html += '</div>';
       }
-      html += '</td>';
-      html += '</tr>';
+      if (!s.mostBeaten && !s.mostLostTo) {
+        html += '<div class="no-data">No rivalry data</div>';
+      }
+      html += '</div>';
+
+      // Cards section
+      html += '<div class="player-card-section">';
+      html += '<div class="section-title">Card Preferences (avg per game)</div>';
+      if (s.allCards.length > 0) {
+        html += '<div class="card-list">';
+        s.allCards.forEach(function(card) {
+          html += '<div class="card-row">';
+          html += '<span class="card-name">' + formatCardName(card.name) + '</span>';
+          html += '<span class="card-avg">' + card.avgPerGame.toFixed(2) + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="no-data">No card data available</div>';
+      }
+      html += '</div>';
+
+      html += '</div>'; // end player-card
     });
 
-    html += '</tbody></table>';
+    html += '</div>'; // end player-cards
     return html;
   }
 

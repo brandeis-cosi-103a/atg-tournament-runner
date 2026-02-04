@@ -1,6 +1,7 @@
 package edu.brandeis.cosi103a.tournament.viewer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.brandeis.cosi103a.tournament.runner.PlayerDiscoveryService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -19,5 +20,12 @@ public class TournamentViewerApplication {
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();
+    }
+
+    @Bean
+    public PlayerDiscoveryService playerDiscoveryService() {
+        PlayerDiscoveryService service = new PlayerDiscoveryService();
+        service.initialize();
+        return service;
     }
 }
