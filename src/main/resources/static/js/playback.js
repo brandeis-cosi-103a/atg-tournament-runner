@@ -450,6 +450,14 @@
     e.stopPropagation();
   });
 
+  // Main page stats toggle
+  document.getElementById('main-stats-toggle').addEventListener('click', function() {
+    var toggle = document.getElementById('main-stats-toggle');
+    var panel = document.getElementById('main-stats-panel');
+    toggle.classList.toggle('collapsed');
+    panel.classList.toggle('hidden');
+  });
+
   /**
    * Calculate tournament statistics from tape data
    */
@@ -600,15 +608,13 @@
   }
 
   /**
-   * Render the statistics table
+   * Build the statistics table HTML
    */
-  function renderStatsTable() {
-    var container = document.getElementById('stats-table-container');
+  function buildStatsTableHtml() {
     var stats = calculateStats();
 
     if (!stats || stats.length === 0) {
-      container.innerHTML = '<p style="color: #8899a6; text-align: center;">No statistics available</p>';
-      return;
+      return '<p style="color: #8899a6; text-align: center;">No statistics available</p>';
     }
 
     var html = '<table class="stats-table">';
@@ -617,7 +623,7 @@
     html += '<th>Player</th>';
     html += '<th>Rating</th>';
     html += '<th>Games</th>';
-    html += '<th>Places</th>';
+    html += '<th class="places-header"><span class="ph-1">1st</span><span class="ph-2">2nd</span><span class="ph-3">3rd</span><span class="ph-4">4th</span></th>';
     html += '<th>Score</th>';
     html += '<th>Top Cards</th>';
     html += '<th>Rivalries</th>';
@@ -631,10 +637,10 @@
       html += '<td class="rating-cell">' + s.rating.toFixed(1) + '</td>';
       html += '<td class="games-cell">' + s.games + '</td>';
       html += '<td class="places-cell">';
-      if (s.places[1] > 0) html += '<span class="place-badge place-1">' + s.places[1] + '×1st</span>';
-      if (s.places[2] > 0) html += '<span class="place-badge place-2">' + s.places[2] + '×2nd</span>';
-      if (s.places[3] > 0) html += '<span class="place-badge place-3">' + s.places[3] + '×3rd</span>';
-      if (s.places[4] > 0) html += '<span class="place-badge place-4">' + s.places[4] + '×4th+</span>';
+      html += '<span class="place-count place-1st">' + s.places[1] + '</span>';
+      html += '<span class="place-count place-2nd">' + s.places[2] + '</span>';
+      html += '<span class="place-count place-3rd">' + s.places[3] + '</span>';
+      html += '<span class="place-count place-4th">' + s.places[4] + '</span>';
       html += '</td>';
       html += '<td class="score-cell">';
       html += '<span class="score-avg">' + s.avgScore.toFixed(1) + '</span>';
@@ -662,7 +668,21 @@
     });
 
     html += '</tbody></table>';
-    container.innerHTML = html;
+    return html;
+  }
+
+  /**
+   * Render the statistics table to both celebration overlay and main page
+   */
+  function renderStatsTable() {
+    var html = buildStatsTableHtml();
+
+    // Render to celebration overlay
+    document.getElementById('stats-table-container').innerHTML = html;
+
+    // Render to main page and show the section
+    document.getElementById('main-stats-table-container').innerHTML = html;
+    document.getElementById('main-stats-section').classList.remove('hidden');
   }
 
   function escapeHtml(text) {

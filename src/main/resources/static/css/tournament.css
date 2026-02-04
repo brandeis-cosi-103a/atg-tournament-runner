@@ -606,21 +606,37 @@ h1 {
 
 .stats-table .places-cell {
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.stats-table .place-badge {
+.stats-table .place-count {
   display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  width: 28px;
+  text-align: center;
+  padding: 2px 4px;
+  margin-right: 2px;
+  border-radius: 3px;
+  font-size: 0.8rem;
   font-weight: 600;
-  margin-right: 4px;
 }
 
-.stats-table .place-1 { background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%); color: #000; }
-.stats-table .place-2 { background: linear-gradient(180deg, #c0c0c0 0%, #808080 100%); color: #000; }
-.stats-table .place-3 { background: linear-gradient(180deg, #cd7f32 0%, #8b4513 100%); color: #fff; }
-.stats-table .place-4 { background: #2f3640; color: #8899a6; }
+.stats-table .place-1st { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+.stats-table .place-2nd { background: rgba(192, 192, 192, 0.2); color: #c0c0c0; }
+.stats-table .place-3rd { background: rgba(205, 127, 50, 0.2); color: #cd7f32; }
+.stats-table .place-4th { background: rgba(128, 128, 128, 0.15); color: #6b7785; }
+
+.stats-table .places-header span {
+  display: inline-block;
+  width: 28px;
+  text-align: center;
+  margin-right: 2px;
+  font-size: 0.7rem;
+}
+
+.stats-table .places-header .ph-1 { color: #ffd700; }
+.stats-table .places-header .ph-2 { color: #c0c0c0; }
+.stats-table .places-header .ph-3 { color: #cd7f32; }
+.stats-table .places-header .ph-4 { color: #6b7785; }
 
 .stats-table .rivalry-cell {
   font-size: 0.8rem;
@@ -688,5 +704,59 @@ h1 {
 
 .stats-table .no-data {
   color: #6b7785;
+}
+
+/* Main page stats section (below chart) */
+.main-stats-section {
+  margin-top: 2rem;
+}
+
+.main-stats-section.hidden {
+  display: none;
+}
+
+.main-stats-toggle {
+  padding: 0.75rem 1rem;
+  background: #1a1f26;
+  border: 1px solid #2f3640;
+  border-radius: 8px 8px 0 0;
+  color: #4a90d9;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.main-stats-toggle:hover {
+  background: #1e2530;
+  border-color: #4a90d9;
+}
+
+.main-stats-toggle .toggle-icon {
+  transition: transform 0.3s ease;
+}
+
+.main-stats-toggle.collapsed .toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.main-stats-panel {
+  background: #1a1f26;
+  border: 1px solid #2f3640;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.main-stats-panel.hidden {
+  display: none;
+}
+
+.main-stats-panel .stats-table-container {
+  padding: 1rem;
 }
 
