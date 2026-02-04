@@ -665,17 +665,3 @@ h1 {
   font-size: 0.7rem;
 }
 
-.stats-table .winrate-cell {
-  white-space: nowrap;
-}
-
-.stats-table .winrate-value {
-  font-weight: 600;
-  color: #2ecc71;
-}
-
-.stats-table .podium-value {
-  display: block;
-  color: #8899a6;
-  font-size: 0.75rem;
-}

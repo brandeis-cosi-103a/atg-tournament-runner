@@ -554,13 +554,6 @@
         s.stdev = 0;
       }
 
-      // Win rate (1st place %)
-      s.winRate = s.games > 0 ? (s.places[1] / s.games * 100) : 0;
-
-      // Podium rate (top 3 %)
-      var podiumCount = s.places[1] + s.places[2] + s.places[3];
-      s.podiumRate = s.games > 0 ? (podiumCount / s.games * 100) : 0;
-
       // Fix best/worst for players with no games
       if (s.games === 0) {
         s.bestScore = 0;
@@ -614,7 +607,6 @@
     html += '<th>Games</th>';
     html += '<th>Places</th>';
     html += '<th>Score</th>';
-    html += '<th>Win %</th>';
     html += '<th>Rivalries</th>';
     html += '</tr></thead>';
     html += '<tbody>';
@@ -635,10 +627,6 @@
       html += '<span class="score-avg">' + s.avgScore.toFixed(1) + '</span>';
       html += '<span class="score-range">±' + s.stdev.toFixed(1) + '</span>';
       html += '<span class="score-minmax">' + s.worstScore + '–' + s.bestScore + '</span>';
-      html += '</td>';
-      html += '<td class="winrate-cell">';
-      html += '<span class="winrate-value">' + s.winRate.toFixed(0) + '%</span>';
-      html += '<span class="podium-value">🏆' + s.podiumRate.toFixed(0) + '%</span>';
       html += '</td>';
       html += '<td class="rivalry-cell">';
       if (s.mostBeaten) {
