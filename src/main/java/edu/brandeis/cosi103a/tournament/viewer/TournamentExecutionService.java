@@ -121,7 +121,7 @@ public class TournamentExecutionService {
             writer.writeTournamentMetadata(config);
 
             // Create table executor
-            TableExecutor tableExecutor = new TableExecutor(engineLoader);
+            TableExecutor tableExecutor = createTableExecutor(engineLoader);
             ExecutorService threadPool = Executors.newFixedThreadPool(
                 Math.min(8, Math.max(4, Runtime.getRuntime().availableProcessors()))
             );
@@ -283,6 +283,17 @@ public class TournamentExecutionService {
             result.put(playerId, Math.round(conservative * 10.0) / 10.0);
         }
         return result;
+    }
+
+    /**
+     * Creates the TableExecutor for running games.
+     * Can be overridden in tests to inject custom behavior (e.g., DelayedPlayerWrapper).
+     *
+     * @param engineLoader the engine loader to use
+     * @return a TableExecutor instance
+     */
+    protected TableExecutor createTableExecutor(EngineLoader engineLoader) {
+        return new TableExecutor(engineLoader);
     }
 
     /**
