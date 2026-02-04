@@ -25,7 +25,7 @@ class TournamentExecutionServiceTest {
     @Test
     void testStartTournamentReturnsValidId(@TempDir Path tempDir) {
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
 
         TournamentConfig config = new TournamentConfig(
             "test-tournament",
@@ -59,7 +59,7 @@ class TournamentExecutionServiceTest {
     @Test
     void testGetTournamentStatusReturnsInitialQueuedState(@TempDir Path tempDir) throws InterruptedException {
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
 
         TournamentConfig config = new TournamentConfig(
             "test-tournament",
@@ -113,7 +113,7 @@ class TournamentExecutionServiceTest {
     @Test
     void testGetTournamentStatusReturnsEmptyForUnknownId(@TempDir Path tempDir) {
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
 
         try {
             Optional<TournamentStatus> status = service.getTournamentStatus("unknown-id");
@@ -126,7 +126,7 @@ class TournamentExecutionServiceTest {
     @Test
     void testGetAllTournamentsReturnsRunningTournaments(@TempDir Path tempDir) {
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
+        TournamentExecutionService service = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
 
         TournamentConfig config = new TournamentConfig(
             "test-tournament",
@@ -166,12 +166,12 @@ class TournamentExecutionServiceTest {
         assertEquals(100, queued.totalGames());
         assertFalse(queued.error().isPresent());
 
-        TournamentStatus running = TournamentStatus.running("id2", 3, 5, 50, 100);
+        TournamentStatus running = TournamentStatus.running("id2", 3, 5, 50, 100, null);
         assertEquals(TournamentStatus.State.RUNNING, running.state());
         assertEquals(3, running.currentRound());
         assertEquals(50, running.completedGames());
 
-        TournamentStatus completed = TournamentStatus.completed("id3", 5, 100);
+        TournamentStatus completed = TournamentStatus.completed("id3", 5, 100, null);
         assertEquals(TournamentStatus.State.COMPLETED, completed.state());
         assertEquals(5, completed.currentRound());
         assertEquals(100, completed.completedGames());

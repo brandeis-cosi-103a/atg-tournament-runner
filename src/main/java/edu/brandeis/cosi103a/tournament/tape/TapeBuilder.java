@@ -44,11 +44,9 @@ public final class TapeBuilder {
             JsonNode tournament = MAPPER.readTree(tournamentFile.toFile());
             JsonNode playersNode = tournament.get("players");
 
-            // Build player list and initial ratings
+            // Build player list and initialize tracker
             List<ObjectNode> players = new ArrayList<>();
-            Map<String, Rating> ratings = new HashMap<>();
-            Map<String, Integer> points = new HashMap<>();
-            Rating defaultRating = gameInfo.getDefaultRating();
+            List<String> playerIds = new ArrayList<>();
             for (JsonNode p : playersNode) {
                 String id = p.get("id").asText();
                 String name = p.get("name").asText();
@@ -56,9 +54,9 @@ public final class TapeBuilder {
                 playerObj.put("id", id);
                 playerObj.put("name", name);
                 players.add(playerObj);
-                ratings.put(id, defaultRating);
-                points.put(id, 0);
+                playerIds.add(id);
             }
+            TrueSkillTracker tracker = new TrueSkillTracker(playerIds, gameInfo);
 
             // Find and sort round files
             List<Path> roundFiles;
@@ -115,15 +113,7 @@ public final class TapeBuilder {
 
                     // Apply TrueSkill sequentially for each game
                     for (List<Placement> placements : tablesForGame) {
-                        // Update ratings directly (no delta merging needed)
-                        ratings = TrueSkillRatingCalculator.update(ratings, placements, gameInfo);
-
-                        // Accumulate placement points: N points for 1st, N-1 for 2nd, etc.
-                        int n = placements.size();
-                        int[] ranks = TrueSkillRatingCalculator.computeRanks(placements);
-                        for (int r = 0; r < placements.size(); r++) {
-                            points.merge(placements.get(r).playerId(), n - ranks[r] + 1, Integer::sum);
-                        }
+                        tracker.processGame(placements);
                     }
 
                     // Build event
@@ -150,15 +140,17 @@ public final class TapeBuilder {
                     event.set("placements", placementsArray);
 
                     // Emit conservative rating (mu - 3*sigma) for display
+                    Map<String, Rating> ratings = tracker.getCurrentRatings();
                     ObjectNode ratingsNode = MAPPER.createObjectNode();
                     for (var entry : ratings.entrySet()) {
-                        double display = TrueSkillRatingCalculator.conservativeRating(entry.getValue());
+                        double display = tracker.getConservativeRating(entry.getKey());
                         ratingsNode.put(entry.getKey(),
                                 Math.round(display * 10.0) / 10.0);
                     }
                     event.set("ratings", ratingsNode);
 
                     // Emit cumulative placement points
+                    Map<String, Integer> points = tracker.getCurrentPoints();
                     ObjectNode pointsNode = MAPPER.createObjectNode();
                     for (var entry : points.entrySet()) {
                         pointsNode.put(entry.getKey(), entry.getValue());
@@ -178,6 +170,7 @@ public final class TapeBuilder {
 
             ObjectNode scoring = MAPPER.createObjectNode();
             scoring.put("model", "trueskill");
+            Rating defaultRating = gameInfo.getDefaultRating();
             scoring.put("initial",
                     Math.round(TrueSkillRatingCalculator.conservativeRating(defaultRating) * 10.0) / 10.0);
             tape.set("scoring", scoring);

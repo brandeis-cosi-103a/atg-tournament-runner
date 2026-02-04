@@ -89,7 +89,7 @@ public class TableExecutor {
      * @param config the player configuration
      * @return a Player instance
      */
-    private Player createPlayer(PlayerConfig config) {
+    protected Player createPlayer(PlayerConfig config) {
         return switch (config.url()) {
             case "naive-money" -> new NaiveBigMoneyPlayer(config.name());
             case "action-heavy" -> new ActionHeavyPlayer(config.name());

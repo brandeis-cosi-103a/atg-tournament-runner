@@ -386,3 +386,58 @@ h1 {
   height: 70px;
   background: linear-gradient(180deg, #cd7f32 0%, #8b4513 100%);
 }
+
+/* Ratings leaderboard */
+.ratings-container {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.ratings-container h3 {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.125rem;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaderboard-table th {
+  background: #333;
+  color: white;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.leaderboard-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+  color: #333;
+}
+
+.leaderboard-table .rank {
+  font-weight: 600;
+  width: 60px;
+}
+
+.leaderboard-table .player-name {
+  font-weight: 500;
+}
+
+.leaderboard-table .rating {
+  font-weight: 600;
+  width: 80px;
+}
+
+.leaderboard-table .change {
+  width: 100px;
+  font-weight: 500;
+}
+
+.change.positive { color: green; }
+.change.negative { color: red; }
+.change.neutral { color: gray; }
