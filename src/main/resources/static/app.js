@@ -13,6 +13,7 @@
   let stompClient = null;
   let currentTournamentId = null;
   let currentTournamentName = null;
+  let previousRatings = {};
 
   // DOM elements
   const form = document.getElementById('tournament-form');
@@ -230,11 +231,12 @@
 
   // Update progress display
   function updateProgress(status) {
-    const { state, currentRound, totalRounds, completedGames, totalGames, error } = status;
+    const { state, currentRound, totalRounds, completedGames, totalGames, ratings, error } = status;
 
     if (state === 'QUEUED') {
       progressInfo.innerHTML = 'Tournament queued for execution...';
       updateProgressBar(0);
+      hideRatings();
     } else if (state === 'RUNNING') {
       const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
       const gameProgress = totalGames > 0 ? (completedGames / totalGames) * 100 : 0;
@@ -245,9 +247,19 @@
         Games completed: ${completedGames} of ${totalGames}
       `;
       updateProgressBar(overallProgress);
+
+      // Update ratings leaderboard
+      if (ratings && Object.keys(ratings).length > 0) {
+        updateRatingsLeaderboard(ratings);
+      }
     } else if (state === 'COMPLETED') {
       progressInfo.innerHTML = 'Tournament completed successfully!';
       updateProgressBar(100);
+
+      // Update final ratings
+      if (ratings) {
+        updateRatingsLeaderboard(ratings);
+      }
 
       // Disconnect WebSocket
       if (stompClient) {
@@ -290,6 +302,64 @@
   function showSuccess(message) {
     successMessage.textContent = message;
     successMessage.style.display = 'block';
+  }
+
+  // Update ratings leaderboard
+  function updateRatingsLeaderboard(ratings) {
+    const container = document.getElementById('ratings-container');
+    const leaderboard = document.getElementById('ratings-leaderboard');
+
+    // Show container if hidden
+    if (container.style.display === 'none') {
+      container.style.display = 'block';
+    }
+
+    // Sort players by rating (descending)
+    const sorted = Object.entries(ratings)
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, rating], index) => ({
+        rank: index + 1,
+        playerId: id,
+        rating: rating,
+        change: previousRatings[id] ? rating - previousRatings[id] : 0
+      }));
+
+    // Build leaderboard HTML with change indicators
+    let html = '<table class="leaderboard-table">';
+    html += '<thead><tr><th>Rank</th><th>Player</th><th>Rating</th><th>Change</th></tr></thead>';
+    html += '<tbody>';
+
+    for (const player of sorted) {
+      const changeClass = player.change > 0 ? 'positive' :
+                         player.change < 0 ? 'negative' : 'neutral';
+      const changeSymbol = player.change > 0 ? '↑' :
+                          player.change < 0 ? '↓' : '−';
+      const changeText = player.change !== 0 ?
+        `${player.change > 0 ? '+' : ''}${player.change.toFixed(1)} ${changeSymbol}` :
+        '−';
+
+      html += `
+        <tr>
+          <td class="rank">${player.rank}</td>
+          <td class="player-name">${player.playerId}</td>
+          <td class="rating">${player.rating.toFixed(1)}</td>
+          <td class="change ${changeClass}">${changeText}</td>
+        </tr>
+      `;
+    }
+
+    html += '</tbody></table>';
+    leaderboard.innerHTML = html;
+
+    // Save current ratings for next update
+    previousRatings = {...ratings};
+  }
+
+  // Hide ratings leaderboard
+  function hideRatings() {
+    const container = document.getElementById('ratings-container');
+    container.style.display = 'none';
+    previousRatings = {};
   }
 
   // Initialize on page load

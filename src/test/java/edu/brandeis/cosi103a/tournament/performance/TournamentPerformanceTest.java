@@ -44,7 +44,7 @@ public class TournamentPerformanceTest {
     private static final String ENGINE_CLASS = "edu.brandeis.cosi103a.engine.GameEngine";
 
     @Test
-    @Disabled("Requires reference engine JAR - enable manually for performance testing")
+    // @Disabled("Requires reference engine JAR - enable manually for performance testing")
     void measurePerformanceWithNetworkDelay() throws Exception {
         System.out.println("\n=== Tournament Performance Test ===\n");
 
