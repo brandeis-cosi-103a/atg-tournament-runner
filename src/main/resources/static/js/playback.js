@@ -578,6 +578,18 @@
       });
       s.mostLostTo = maxLost.count > 0 ? maxLost : null;
 
+      // Get top cards from deckStats (excluding starting cards)
+      var startingCards = ['BITCOIN', 'METHOD'];
+      s.topCards = [];
+      if (tape.deckStats && tape.deckStats[s.id]) {
+        var cardCounts = tape.deckStats[s.id];
+        var cards = Object.keys(cardCounts)
+          .filter(function(card) { return startingCards.indexOf(card) === -1; })
+          .map(function(card) { return { name: card, count: cardCounts[card] }; })
+          .sort(function(a, b) { return b.count - a.count; });
+        s.topCards = cards.slice(0, 3);
+      }
+
       return s;
     });
 
@@ -607,6 +619,7 @@
     html += '<th>Games</th>';
     html += '<th>Places</th>';
     html += '<th>Score</th>';
+    html += '<th>Top Cards</th>';
     html += '<th>Rivalries</th>';
     html += '</tr></thead>';
     html += '<tbody>';
@@ -627,6 +640,15 @@
       html += '<span class="score-avg">' + s.avgScore.toFixed(1) + '</span>';
       html += '<span class="score-range">±' + s.stdev.toFixed(1) + '</span>';
       html += '<span class="score-minmax">' + s.worstScore + '–' + s.bestScore + '</span>';
+      html += '</td>';
+      html += '<td class="topcards-cell">';
+      if (s.topCards.length > 0) {
+        s.topCards.forEach(function(card) {
+          html += '<span class="card-badge" title="' + card.count + ' total">' + formatCardName(card.name) + '</span>';
+        });
+      } else {
+        html += '<span class="no-data">—</span>';
+      }
       html += '</td>';
       html += '<td class="rivalry-cell">';
       if (s.mostBeaten) {

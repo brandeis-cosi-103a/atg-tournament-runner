@@ -665,3 +665,28 @@ h1 {
   font-size: 0.7rem;
 }
 
+.stats-table .topcards-cell {
+  white-space: nowrap;
+}
+
+.stats-table .card-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  margin-right: 4px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: #2f3640;
+  color: #4a90d9;
+  border: 1px solid #3d4854;
+}
+
+.stats-table .card-badge:hover {
+  background: #3d4854;
+}
+
+.stats-table .no-data {
+  color: #6b7785;
+}
+

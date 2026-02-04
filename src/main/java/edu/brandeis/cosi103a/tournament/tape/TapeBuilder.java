@@ -58,6 +58,12 @@ public final class TapeBuilder {
             }
             TrueSkillTracker tracker = new TrueSkillTracker(playerIds, gameInfo);
 
+            // Track card frequencies per player (card type -> count)
+            Map<String, Map<String, Integer>> playerCardCounts = new HashMap<>();
+            for (String playerId : playerIds) {
+                playerCardCounts.put(playerId, new HashMap<>());
+            }
+
             // Find and sort round files
             List<Path> roundFiles;
             try (Stream<Path> paths = Files.list(tournamentDir)) {
@@ -94,10 +100,22 @@ public final class TapeBuilder {
                         int gameIndex = outcome.get("gameIndex").asInt();
                         List<Placement> placements = new ArrayList<>();
                         for (JsonNode pl : outcome.get("placements")) {
-                            placements.add(new Placement(
-                                    pl.get("playerId").asText(),
-                                    pl.get("score").asInt()
-                            ));
+                            String playerId = pl.get("playerId").asText();
+                            int score = pl.get("score").asInt();
+                            List<String> deck = new ArrayList<>();
+                            JsonNode deckNode = pl.get("deck");
+                            if (deckNode != null && deckNode.isArray()) {
+                                for (JsonNode cardType : deckNode) {
+                                    String cardName = cardType.asText();
+                                    deck.add(cardName);
+                                    // Aggregate card counts
+                                    Map<String, Integer> counts = playerCardCounts.get(playerId);
+                                    if (counts != null) {
+                                        counts.merge(cardName, 1, Integer::sum);
+                                    }
+                                }
+                            }
+                            placements.add(new Placement(playerId, score, deck));
                         }
                         gamesByIndex.computeIfAbsent(gameIndex, k -> new ArrayList<>())
                                 .add(placements);
@@ -181,6 +199,21 @@ public final class TapeBuilder {
             tape.set("scoring", scoring);
 
             tape.set("events", events);
+
+            // Add aggregated deck stats per player
+            ObjectNode deckStats = MAPPER.createObjectNode();
+            for (var entry : playerCardCounts.entrySet()) {
+                String playerId = entry.getKey();
+                Map<String, Integer> cardCounts = entry.getValue();
+                if (!cardCounts.isEmpty()) {
+                    ObjectNode playerCards = MAPPER.createObjectNode();
+                    for (var cardEntry : cardCounts.entrySet()) {
+                        playerCards.put(cardEntry.getKey(), cardEntry.getValue());
+                    }
+                    deckStats.set(playerId, playerCards);
+                }
+            }
+            tape.set("deckStats", deckStats);
 
             MAPPER.writeValue(tournamentDir.resolve("tape.json").toFile(), tape);
 

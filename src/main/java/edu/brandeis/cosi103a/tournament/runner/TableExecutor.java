@@ -58,7 +58,10 @@ public class TableExecutor {
                 List<Placement> placements = new ArrayList<>();
                 for (PlayerResult pr : result.playerResults()) {
                     String id = nameToId.getOrDefault(pr.playerName(), pr.playerName().toLowerCase());
-                    placements.add(new Placement(id, pr.score()));
+                    List<String> deckTypes = pr.endingDeck().stream()
+                        .map(card -> card.type().name())
+                        .toList();
+                    placements.add(new Placement(id, pr.score(), deckTypes));
                 }
                 outcomes.add(new GameOutcome(gameIndex, placements));
             } catch (Exception e) {
