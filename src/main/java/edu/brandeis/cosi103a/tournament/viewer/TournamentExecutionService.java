@@ -5,6 +5,7 @@ import edu.brandeis.cosi.atg.cards.Card;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.runner.*;
 import edu.brandeis.cosi103a.tournament.tape.TapeBuilder;
+import edu.brandeis.cosi103a.tournament.tape.TrueSkillTracker;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -125,6 +126,12 @@ public class TournamentExecutionService {
                 Math.min(8, Math.max(4, Runtime.getRuntime().availableProcessors()))
             );
 
+            // Initialize TrueSkill tracker for live rating updates
+            List<String> playerIds = config.players().stream()
+                .map(PlayerConfig::id)
+                .toList();
+            TrueSkillTracker ratingsTracker = new TrueSkillTracker(playerIds, GameInfo.getDefaultGameInfo());
+
             try {
                 for (int round = 1; round <= config.rounds(); round++) {
                     // Update status to RUNNING
@@ -150,21 +157,37 @@ public class TournamentExecutionService {
                     List<List<PlayerConfig>> games = RoundGenerator.generateBalancedGames(
                         config.players(), gamesPerPlayer);
 
-                    // Run games in parallel
-                    List<Future<MatchResult>> futures = new ArrayList<>();
+                    // Run games in parallel using CompletionService for incremental updates
+                    CompletionService<MatchResult> completionService =
+                        new ExecutorCompletionService<>(threadPool);
+
                     for (int g = 0; g < games.size(); g++) {
                         final int gameNum = g + 1;
                         final List<PlayerConfig> gamePlayers = games.get(g);
-                        futures.add(threadPool.submit(() ->
+                        completionService.submit(() ->
                             tableExecutor.executeTable(gameNum, gamePlayers, kingdomCards,
                                 1, config.maxTurns()) // 1 game per match
-                        ));
+                        );
                     }
 
-                    // Collect results
+                    // Collect results and send updates as each game completes
                     List<MatchResult> matches = new ArrayList<>();
-                    for (Future<MatchResult> future : futures) {
-                        matches.add(future.get());
+                    for (int i = 0; i < games.size(); i++) {
+                        MatchResult result = completionService.take().get();
+                        matches.add(result);
+
+                        // Update ratings after each game (each match contains 1 game)
+                        if (!result.outcomes().isEmpty()) {
+                            ratingsTracker.processGame(result.outcomes().get(0).placements());
+                        }
+                        completedGames++;
+
+                        // Send WebSocket update with current ratings after EACH game
+                        Map<String, Double> currentRatings = buildRatingsMap(ratingsTracker);
+                        TournamentStatus status = TournamentStatus.running(
+                            tournamentId, round, config.rounds(), completedGames, totalGames, currentRatings
+                        );
+                        sendWebSocketUpdate(tournamentId, status);
                     }
 
                     // Write round results
@@ -175,12 +198,10 @@ public class TournamentExecutionService {
                     RoundResult roundResult = new RoundResult(round, kingdomCardNames, matches);
                     writer.writeRound(roundResult);
 
-                    // Update completed games count
-                    completedGames += gamesPerRound;
-
-                    // Update status after round completion
+                    // Update status after round completion (completedGames already incremented per-game)
+                    Map<String, Double> currentRatings = buildRatingsMap(ratingsTracker);
                     TournamentStatus updatedStatus = TournamentStatus.running(
-                        tournamentId, round, config.rounds(), completedGames, totalGames, null
+                        tournamentId, round, config.rounds(), completedGames, totalGames, currentRatings
                     );
                     runningTournaments.put(tournamentId, updatedStatus);
                     if (progressListener != null) {
@@ -201,9 +222,10 @@ public class TournamentExecutionService {
                 System.err.println("Warning: Failed to build tape.json for tournament " + tournamentId + ": " + tapeEx.getMessage());
             }
 
-            // Mark as completed
+            // Mark as completed with final ratings
+            Map<String, Double> finalRatings = buildRatingsMap(ratingsTracker);
             TournamentStatus completedStatus = TournamentStatus.completed(
-                tournamentId, config.rounds(), totalGames, null
+                tournamentId, config.rounds(), totalGames, finalRatings
             );
             runningTournaments.put(tournamentId, completedStatus);
             if (progressListener != null) {
@@ -246,6 +268,21 @@ public class TournamentExecutionService {
             // Log error but don't fail tournament execution
             System.err.println("Failed to send WebSocket update for tournament " + tournamentId + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Converts TrueSkillTracker ratings to display format (conservative rating, rounded).
+     *
+     * @param tracker the TrueSkill tracker with current ratings
+     * @return map of player IDs to conservative ratings (mu - 3*sigma), rounded to 1 decimal
+     */
+    private Map<String, Double> buildRatingsMap(TrueSkillTracker tracker) {
+        Map<String, Double> result = new HashMap<>();
+        for (String playerId : tracker.getCurrentRatings().keySet()) {
+            double conservative = tracker.getConservativeRating(playerId);
+            result.put(playerId, Math.round(conservative * 10.0) / 10.0);
+        }
+        return result;
     }
 
     /**
