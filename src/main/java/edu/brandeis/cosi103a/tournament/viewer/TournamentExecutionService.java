@@ -26,6 +26,7 @@ public class TournamentExecutionService {
     private final ExecutorService executorService;
     private final Path dataDir;
     private final SimpMessagingTemplate messagingTemplate;
+    private final int gameThreadPoolSize;
 
     /**
      * Progress listener callback interface for tournament execution.
@@ -36,8 +37,10 @@ public class TournamentExecutionService {
 
     public TournamentExecutionService(
             @Value("${tournament.data-dir:./data}") String dataDir,
+            @Value("${tournament.game-thread-pool-size:64}") int gameThreadPoolSize,
             SimpMessagingTemplate messagingTemplate) {
         this.dataDir = Path.of(dataDir);
+        this.gameThreadPoolSize = gameThreadPoolSize;
         this.messagingTemplate = messagingTemplate;
         this.executorService = Executors.newFixedThreadPool(
             Math.max(2, Runtime.getRuntime().availableProcessors() / 2)
@@ -122,9 +125,8 @@ public class TournamentExecutionService {
 
             // Create table executor
             TableExecutor tableExecutor = createTableExecutor(engineLoader);
-            ExecutorService threadPool = Executors.newFixedThreadPool(
-                Math.min(8, Math.max(4, Runtime.getRuntime().availableProcessors()))
-            );
+            // Configurable pool size for I/O-bound workloads (network players spend time waiting)
+            ExecutorService threadPool = Executors.newFixedThreadPool(gameThreadPoolSize);
 
             // Initialize TrueSkill tracker for live rating updates
             List<String> playerIds = config.players().stream()

@@ -63,23 +63,22 @@ public class DelayedTournamentIntegrationTest {
         EngineLoader engineLoader = new EngineLoader(ENGINE_JAR, ENGINE_CLASS);
         SimpMessagingTemplate mockMessaging = mock(SimpMessagingTemplate.class);
 
-        // Tournament configuration: 4 players, 3 rounds
-        List<PlayerConfig> players = List.of(
-            new PlayerConfig("p1", "Player1", "naive-money"),
-            new PlayerConfig("p2", "Player2", "random"),
-            new PlayerConfig("p3", "Player3", "naive-money"),
-            new PlayerConfig("p4", "Player4", "action-heavy")
-        );
+        // Tournament configuration: 16 players, 5 rounds
+        List<PlayerConfig> players = new java.util.ArrayList<>();
+        String[] strategies = {"naive-money", "random", "action-heavy", "naive-money"};
+        for (int i = 1; i <= 16; i++) {
+            players.add(new PlayerConfig("p" + i, "Player" + i, strategies[(i - 1) % 4]));
+        }
 
         TournamentConfig config = new TournamentConfig(
             "perf-test",
-            3,      // rounds
-            4,      // games per player per round
+            5,      // rounds
+            16,     // games per player per round (increased from 4)
             100,    // max turns
             players
         );
 
-        int totalGames = config.rounds() * players.size();  // 3 * 4 = 12 games
+        int totalGames = config.rounds() * config.gamesPerPlayer() * players.size() / 4;  // 4-player games
 
         System.out.println("Configuration:");
         System.out.println("  Players: " + players.size());
@@ -89,36 +88,15 @@ public class DelayedTournamentIntegrationTest {
         System.out.println("  Network delay: " + MIN_DELAY_MS + "-" + MAX_DELAY_MS + "ms");
         System.out.println();
 
-        // Run baseline (no delays)
-        System.out.println("Running baseline tournament (no delays)...");
-        long baselineStart = System.nanoTime();
-        runTournament(tempDir.resolve("baseline"), config, engineLoader, mockMessaging, false);
-        long baselineEnd = System.nanoTime();
-        double baselineSeconds = (baselineEnd - baselineStart) / 1_000_000_000.0;
-        System.out.printf("  Completed in %.2f seconds%n%n", baselineSeconds);
+        // Run tournament with network delays
+        System.out.println("Running tournament with " + MIN_DELAY_MS + "-" + MAX_DELAY_MS + "ms delays...");
+        long start = System.nanoTime();
+        runTournament(tempDir.resolve("tournament"), config, engineLoader, mockMessaging, true);
+        long end = System.nanoTime();
+        double seconds = (end - start) / 1_000_000_000.0;
 
-        // Run with network delays
-        System.out.println("Running tournament with network delays (" + MIN_DELAY_MS + "-" + MAX_DELAY_MS + "ms)...");
-        long delayedStart = System.nanoTime();
-        runTournament(tempDir.resolve("delayed"), config, engineLoader, mockMessaging, true);
-        long delayedEnd = System.nanoTime();
-        double delayedSeconds = (delayedEnd - delayedStart) / 1_000_000_000.0;
-        System.out.printf("  Completed in %.2f seconds%n%n", delayedSeconds);
-
-        // Print comparison
-        System.out.println("=== Results ===\n");
-        System.out.printf("Baseline (no delays):   %.2f seconds (%.2f games/sec)%n",
-            baselineSeconds, totalGames / baselineSeconds);
-        System.out.printf("With delays (2-5ms):    %.2f seconds (%.2f games/sec)%n",
-            delayedSeconds, totalGames / delayedSeconds);
-        System.out.printf("Slowdown factor:        %.2fx%n", delayedSeconds / baselineSeconds);
-        System.out.println();
-
-        System.out.println("This test measures REAL tournament execution with:");
-        System.out.println("  - Parallel game execution via thread pool");
-        System.out.println("  - CompletionService result collection");
-        System.out.println("  - Live TrueSkill rating updates");
-        System.out.println("  - All production code paths");
+        System.out.printf("%nCompleted %d games in %.2f seconds%n", totalGames, seconds);
+        System.out.printf(">>> %.2f games/sec <<<%n", totalGames / seconds);
     }
 
     private void runTournament(Path dataDir, TournamentConfig config, EngineLoader engineLoader,
@@ -126,13 +104,13 @@ public class DelayedTournamentIntegrationTest {
         CountDownLatch completionLatch = new CountDownLatch(1);
 
         TournamentExecutionService service = withDelay
-            ? new TournamentExecutionService(dataDir.toString(), messaging) {
+            ? new TournamentExecutionService(dataDir.toString(), 64, messaging) {
                 @Override
                 protected TableExecutor createTableExecutor(EngineLoader loader) {
                     return new DelayedTableExecutor(loader, MIN_DELAY_MS, MAX_DELAY_MS);
                 }
             }
-            : new TournamentExecutionService(dataDir.toString(), messaging);
+            : new TournamentExecutionService(dataDir.toString(), 64, messaging);
 
         try {
             service.startTournament(config, engineLoader, status -> {

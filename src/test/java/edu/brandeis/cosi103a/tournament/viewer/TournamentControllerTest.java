@@ -30,7 +30,7 @@ class TournamentControllerTest {
     void setUp() {
         service = new TournamentService(tempDir.toString(), new ObjectMapper());
         SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
-        executionService = new TournamentExecutionService(tempDir.toString(), mockMessagingTemplate);
+        executionService = new TournamentExecutionService(tempDir.toString(), 64, mockMessagingTemplate);
         controller = new TournamentController(service, executionService, "", "");
     }
 
