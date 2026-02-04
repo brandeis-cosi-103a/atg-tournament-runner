@@ -104,7 +104,7 @@ public final class TrueSkillRatingCalculator {
 
     /**
      * Compute 1-based ranks from placements, breaking ties randomly.
-     * Placements are ordered highest score first.
+     * Placements can be in any order - this method sorts by score descending.
      *
      * JSkills fails to converge when players have tied ranks, so we break ties
      * using a deterministic pseudorandom shuffle based on the game's player IDs
@@ -115,14 +115,24 @@ public final class TrueSkillRatingCalculator {
         long seed = computeGameSeed(placements);
         Random random = new Random(seed);
 
+        // Create index list sorted by score descending
+        List<Integer> sortedByScore = new ArrayList<>();
+        for (int i = 0; i < placements.size(); i++) {
+            sortedByScore.add(i);
+        }
+        sortedByScore.sort((a, b) -> Integer.compare(
+            placements.get(b).score(), placements.get(a).score()));
+
         // Build list of indices grouped by score, then shuffle within each group
         List<Integer> orderedIndices = new ArrayList<>();
         int i = 0;
-        while (i < placements.size()) {
-            int score = placements.get(i).score();
+        while (i < sortedByScore.size()) {
+            int idx = sortedByScore.get(i);
+            int score = placements.get(idx).score();
             List<Integer> tiedIndices = new ArrayList<>();
-            while (i < placements.size() && placements.get(i).score() == score) {
-                tiedIndices.add(i);
+            while (i < sortedByScore.size() &&
+                   placements.get(sortedByScore.get(i)).score() == score) {
+                tiedIndices.add(sortedByScore.get(i));
                 i++;
             }
             // Shuffle tied players randomly
