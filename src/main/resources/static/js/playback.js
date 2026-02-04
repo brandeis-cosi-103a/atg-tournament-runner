@@ -436,6 +436,200 @@
     }
   }
 
+  // Stats panel toggle
+  document.getElementById('stats-toggle').addEventListener('click', function(e) {
+    e.stopPropagation(); // Don't dismiss celebration
+    var toggle = document.getElementById('stats-toggle');
+    var panel = document.getElementById('stats-panel');
+    toggle.classList.toggle('expanded');
+    panel.classList.toggle('hidden');
+  });
+
+  // Prevent clicks inside stats panel from dismissing celebration
+  document.getElementById('stats-panel').addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+
+  /**
+   * Calculate tournament statistics from tape data
+   */
+  function calculateStats() {
+    if (!tape || !tape.events || tape.events.length === 0) return null;
+
+    var stats = {};
+    var playerMap = {};
+
+    // Initialize player data
+    tape.players.forEach(function(p) {
+      playerMap[p.id] = p.name;
+      stats[p.id] = {
+        id: p.id,
+        name: p.name,
+        games: 0,
+        places: { 1: 0, 2: 0, 3: 0, 4: 0 },
+        totalScore: 0,
+        bestScore: 0,
+        beatCount: {},  // Who this player beat (id -> count)
+        lostCount: {}   // Who beat this player (id -> count)
+      };
+    });
+
+    // Process each game event
+    tape.events.forEach(function(ev) {
+      if (!ev.placements || ev.placements.length === 0) return;
+
+      // Sort placements by score descending
+      var sorted = ev.placements.slice().sort(function(a, b) {
+        return b.score - a.score;
+      });
+
+      // Assign places (handle ties)
+      var places = [];
+      var currentPlace = 1;
+      for (var i = 0; i < sorted.length; i++) {
+        if (i > 0 && sorted[i].score < sorted[i - 1].score) {
+          currentPlace = i + 1;
+        }
+        places.push({ id: sorted[i].id, score: sorted[i].score, place: currentPlace });
+      }
+
+      // Update stats for each player in this game
+      places.forEach(function(p) {
+        var s = stats[p.id];
+        if (!s) return;
+
+        s.games++;
+        s.totalScore += p.score;
+        if (p.score > s.bestScore) s.bestScore = p.score;
+
+        // Cap place at 4 for display purposes
+        var placeKey = Math.min(p.place, 4);
+        s.places[placeKey]++;
+      });
+
+      // Calculate head-to-head results
+      for (var i = 0; i < places.length; i++) {
+        for (var j = i + 1; j < places.length; j++) {
+          var higher = places[i];
+          var lower = places[j];
+
+          // Only count if actually different scores (not a tie)
+          if (higher.score > lower.score) {
+            // higher beat lower
+            if (!stats[higher.id].beatCount[lower.id]) {
+              stats[higher.id].beatCount[lower.id] = 0;
+            }
+            stats[higher.id].beatCount[lower.id]++;
+
+            if (!stats[lower.id].lostCount[higher.id]) {
+              stats[lower.id].lostCount[higher.id] = 0;
+            }
+            stats[lower.id].lostCount[higher.id]++;
+          }
+        }
+      }
+    });
+
+    // Get final ratings
+    var finalEvent = tape.events[tape.events.length - 1];
+
+    // Convert to array and add computed fields
+    var result = Object.values(stats).map(function(s) {
+      s.rating = finalEvent.ratings[s.id] || 0;
+      s.avgScore = s.games > 0 ? (s.totalScore / s.games).toFixed(1) : 0;
+
+      // Find most beaten opponent
+      var maxBeat = { id: null, count: 0, name: '' };
+      Object.keys(s.beatCount).forEach(function(oppId) {
+        if (s.beatCount[oppId] > maxBeat.count) {
+          maxBeat = { id: oppId, count: s.beatCount[oppId], name: playerMap[oppId] };
+        }
+      });
+      s.mostBeaten = maxBeat.count > 0 ? maxBeat : null;
+
+      // Find most lost to opponent
+      var maxLost = { id: null, count: 0, name: '' };
+      Object.keys(s.lostCount).forEach(function(oppId) {
+        if (s.lostCount[oppId] > maxLost.count) {
+          maxLost = { id: oppId, count: s.lostCount[oppId], name: playerMap[oppId] };
+        }
+      });
+      s.mostLostTo = maxLost.count > 0 ? maxLost : null;
+
+      return s;
+    });
+
+    // Sort by rating descending
+    result.sort(function(a, b) { return b.rating - a.rating; });
+
+    return result;
+  }
+
+  /**
+   * Render the statistics table
+   */
+  function renderStatsTable() {
+    var container = document.getElementById('stats-table-container');
+    var stats = calculateStats();
+
+    if (!stats || stats.length === 0) {
+      container.innerHTML = '<p style="color: #8899a6; text-align: center;">No statistics available</p>';
+      return;
+    }
+
+    var html = '<table class="stats-table">';
+    html += '<thead><tr>';
+    html += '<th class="rank-cell">#</th>';
+    html += '<th>Player</th>';
+    html += '<th>Rating</th>';
+    html += '<th>Games</th>';
+    html += '<th>Places</th>';
+    html += '<th>Avg Score</th>';
+    html += '<th>Rivalries</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+
+    stats.forEach(function(s, idx) {
+      html += '<tr>';
+      html += '<td class="rank-cell">' + (idx + 1) + '</td>';
+      html += '<td class="name-cell" title="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</td>';
+      html += '<td class="rating-cell">' + s.rating.toFixed(1) + '</td>';
+      html += '<td class="games-cell">' + s.games + '</td>';
+      html += '<td class="places-cell">';
+      if (s.places[1] > 0) html += '<span class="place-badge place-1">' + s.places[1] + '×1st</span>';
+      if (s.places[2] > 0) html += '<span class="place-badge place-2">' + s.places[2] + '×2nd</span>';
+      if (s.places[3] > 0) html += '<span class="place-badge place-3">' + s.places[3] + '×3rd</span>';
+      if (s.places[4] > 0) html += '<span class="place-badge place-4">' + s.places[4] + '×4th+</span>';
+      html += '</td>';
+      html += '<td class="avg-score-cell">' + s.avgScore + '</td>';
+      html += '<td class="rivalry-cell">';
+      if (s.mostBeaten) {
+        html += '<span class="rivalry-item rivalry-beat">▲ ' + escapeHtml(s.mostBeaten.name) + ' (' + s.mostBeaten.count + ')</span>';
+      }
+      if (s.mostLostTo) {
+        html += '<span class="rivalry-item rivalry-lost">▼ ' + escapeHtml(s.mostLostTo.name) + ' (' + s.mostLostTo.count + ')</span>';
+      }
+      html += '</td>';
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Render stats when celebration is shown
+  var origShowCelebration = showCelebration;
+  showCelebration = function() {
+    origShowCelebration();
+    renderStatsTable();
+  };
+
   // Start animation loop
   requestAnimationFrame(tick);
 })();

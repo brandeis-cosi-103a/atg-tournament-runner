@@ -467,3 +467,179 @@ h1 {
 .change.positive { color: green; }
 .change.negative { color: red; }
 .change.neutral { color: gray; }
+
+/* Tournament Statistics Panel */
+.stats-toggle {
+  margin-top: 2rem;
+  padding: 0.75rem 1.5rem;
+  background: #1a1f26;
+  border: 1px solid #2f3640;
+  border-radius: 8px;
+  color: #4a90d9;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 10;
+  transition: background 0.2s, border-color 0.2s;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.celebration.revealed .stats-toggle {
+  opacity: 1;
+  visibility: visible;
+  animation: fadeIn 0.5s ease 3s forwards;
+}
+
+.stats-toggle:hover {
+  background: #1e2530;
+  border-color: #4a90d9;
+}
+
+.stats-toggle .toggle-icon {
+  transition: transform 0.3s ease;
+}
+
+.stats-toggle.expanded .toggle-icon {
+  transform: rotate(180deg);
+}
+
+.stats-panel {
+  margin-top: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  background: #1a1f26;
+  border: 1px solid #2f3640;
+  border-radius: 8px;
+  z-index: 10;
+  animation: slideDown 0.3s ease;
+}
+
+.stats-panel.hidden {
+  display: none;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 400px;
+  }
+}
+
+.stats-table-container {
+  padding: 1rem;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.stats-table th {
+  background: #2f3640;
+  color: #e7e9ea;
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #3d4854;
+  white-space: nowrap;
+}
+
+.stats-table th.sortable {
+  cursor: pointer;
+}
+
+.stats-table th.sortable:hover {
+  background: #3d4854;
+}
+
+.stats-table th .sort-indicator {
+  margin-left: 4px;
+  opacity: 0.5;
+}
+
+.stats-table th.sorted .sort-indicator {
+  opacity: 1;
+}
+
+.stats-table td {
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid #2f3640;
+  color: #e7e9ea;
+}
+
+.stats-table tr:hover td {
+  background: #1e2530;
+}
+
+.stats-table .rank-cell {
+  font-weight: 600;
+  color: #8899a6;
+  width: 40px;
+  text-align: center;
+}
+
+.stats-table .name-cell {
+  font-weight: 600;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-table .rating-cell {
+  font-weight: 600;
+  color: #4a90d9;
+}
+
+.stats-table .games-cell {
+  color: #8899a6;
+  text-align: center;
+}
+
+.stats-table .places-cell {
+  white-space: nowrap;
+}
+
+.stats-table .place-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.stats-table .place-1 { background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%); color: #000; }
+.stats-table .place-2 { background: linear-gradient(180deg, #c0c0c0 0%, #808080 100%); color: #000; }
+.stats-table .place-3 { background: linear-gradient(180deg, #cd7f32 0%, #8b4513 100%); color: #fff; }
+.stats-table .place-4 { background: #2f3640; color: #8899a6; }
+
+.stats-table .rivalry-cell {
+  font-size: 0.8rem;
+}
+
+.stats-table .rivalry-item {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.stats-table .rivalry-beat {
+  color: #2ecc71;
+}
+
+.stats-table .rivalry-lost {
+  color: #e74c3c;
+}
+
+.stats-table .avg-score-cell {
+  color: #8899a6;
+  text-align: center;
+}
