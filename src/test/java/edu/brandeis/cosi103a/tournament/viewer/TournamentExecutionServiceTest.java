@@ -166,12 +166,12 @@ class TournamentExecutionServiceTest {
         assertEquals(100, queued.totalGames());
         assertFalse(queued.error().isPresent());
 
-        TournamentStatus running = TournamentStatus.running("id2", 3, 5, 50, 100);
+        TournamentStatus running = TournamentStatus.running("id2", 3, 5, 50, 100, null);
         assertEquals(TournamentStatus.State.RUNNING, running.state());
         assertEquals(3, running.currentRound());
         assertEquals(50, running.completedGames());
 
-        TournamentStatus completed = TournamentStatus.completed("id3", 5, 100);
+        TournamentStatus completed = TournamentStatus.completed("id3", 5, 100, null);
         assertEquals(TournamentStatus.State.COMPLETED, completed.state());
         assertEquals(5, completed.currentRound());
         assertEquals(100, completed.completedGames());

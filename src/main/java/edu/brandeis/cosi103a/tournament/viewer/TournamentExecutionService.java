@@ -129,7 +129,7 @@ public class TournamentExecutionService {
                 for (int round = 1; round <= config.rounds(); round++) {
                     // Update status to RUNNING
                     TournamentStatus runningStatus = TournamentStatus.running(
-                        tournamentId, round, config.rounds(), completedGames, totalGames
+                        tournamentId, round, config.rounds(), completedGames, totalGames, null
                     );
                     runningTournaments.put(tournamentId, runningStatus);
                     if (progressListener != null) {
@@ -180,7 +180,7 @@ public class TournamentExecutionService {
 
                     // Update status after round completion
                     TournamentStatus updatedStatus = TournamentStatus.running(
-                        tournamentId, round, config.rounds(), completedGames, totalGames
+                        tournamentId, round, config.rounds(), completedGames, totalGames, null
                     );
                     runningTournaments.put(tournamentId, updatedStatus);
                     if (progressListener != null) {
@@ -203,7 +203,7 @@ public class TournamentExecutionService {
 
             // Mark as completed
             TournamentStatus completedStatus = TournamentStatus.completed(
-                tournamentId, config.rounds(), totalGames
+                tournamentId, config.rounds(), totalGames, null
             );
             runningTournaments.put(tournamentId, completedStatus);
             if (progressListener != null) {
