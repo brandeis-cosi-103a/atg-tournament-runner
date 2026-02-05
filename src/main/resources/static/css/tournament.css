@@ -844,6 +844,25 @@ h1 {
   fill: rgba(74, 144, 217, 0.3);
 }
 
+.sparkline-tooltip {
+  position: absolute;
+  background: #1a1f26;
+  border: 1px solid #4a90d9;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  color: #e7e9ea;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.1s;
+  white-space: nowrap;
+}
+
+.sparkline-tooltip.visible {
+  opacity: 1;
+}
+
 .player-card-stats {
   display: flex;
   padding: 0.75rem 1rem;

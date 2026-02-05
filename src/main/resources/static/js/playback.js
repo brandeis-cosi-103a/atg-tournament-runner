@@ -656,12 +656,12 @@
       return x.toFixed(1) + ',' + y.toFixed(1);
     }).join(' ');
 
-    // Build invisible hover circles with tooltips
+    // Build invisible hover circles with data for custom tooltip
     var circles = history.map(function(pt, i) {
       var x = (i / (history.length - 1)) * width;
       var y = height - ((pt.rating - globalMin) / range) * height;
-      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="6" fill="transparent" class="sparkline-hover">' +
-        '<title>Game ' + pt.game + ': ' + pt.rating.toFixed(1) + '</title></circle>';
+      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="6" fill="transparent" class="sparkline-hover" ' +
+        'data-tip="Game ' + pt.game + ': ' + pt.rating.toFixed(1) + '"/>';
     }).join('');
 
     // Final point dot
@@ -795,6 +795,45 @@
     var html = buildStatsTableHtml();
     document.getElementById('main-stats-table-container').innerHTML = html;
     document.getElementById('main-stats-section').classList.remove('hidden');
+    setupSparklineTooltips();
+  }
+
+  /**
+   * Set up instant tooltips for sparkline hover points
+   */
+  function setupSparklineTooltips() {
+    // Create tooltip element if it doesn't exist
+    var tooltip = document.getElementById('sparkline-tooltip');
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.id = 'sparkline-tooltip';
+      tooltip.className = 'sparkline-tooltip';
+      document.body.appendChild(tooltip);
+    }
+
+    // Event delegation for sparkline hover circles
+    document.addEventListener('mouseover', function(e) {
+      if (e.target.classList.contains('sparkline-hover')) {
+        var tip = e.target.getAttribute('data-tip');
+        if (tip) {
+          tooltip.textContent = tip;
+          tooltip.classList.add('visible');
+        }
+      }
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (tooltip.classList.contains('visible')) {
+        tooltip.style.left = (e.pageX + 10) + 'px';
+        tooltip.style.top = (e.pageY - 25) + 'px';
+      }
+    });
+
+    document.addEventListener('mouseout', function(e) {
+      if (e.target.classList.contains('sparkline-hover')) {
+        tooltip.classList.remove('visible');
+      }
+    });
   }
 
   function escapeHtml(text) {
