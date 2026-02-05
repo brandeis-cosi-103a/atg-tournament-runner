@@ -623,15 +623,18 @@
 
   /**
    * Build an SVG sparkline from rating history
+   * @param history - array of rating values
+   * @param width - SVG width
+   * @param height - SVG height
+   * @param globalMin - shared minimum for consistent scale across sparklines
+   * @param globalMax - shared maximum for consistent scale across sparklines
    */
-  function buildSparkline(history, width, height) {
+  function buildSparkline(history, width, height, globalMin, globalMax) {
     if (!history || history.length < 2) {
       return '<svg class="sparkline" width="' + width + '" height="' + height + '"></svg>';
     }
 
-    var min = Math.min.apply(null, history);
-    var max = Math.max.apply(null, history);
-    var range = max - min;
+    var range = globalMax - globalMin;
 
     // Handle case where all values are the same
     if (range === 0) {
@@ -641,22 +644,16 @@
         '</svg>';
     }
 
-    // Add padding to min/max for visual comfort
-    var padding = range * 0.1;
-    min -= padding;
-    max += padding;
-    range = max - min;
-
     // Build polyline points
     var points = history.map(function(val, i) {
       var x = (i / (history.length - 1)) * width;
-      var y = height - ((val - min) / range) * height;
+      var y = height - ((val - globalMin) / range) * height;
       return x.toFixed(1) + ',' + y.toFixed(1);
     }).join(' ');
 
     // Final point for the dot
     var lastX = width;
-    var lastY = height - ((history[history.length - 1] - min) / range) * height;
+    var lastY = height - ((history[history.length - 1] - globalMin) / range) * height;
 
     return '<svg class="sparkline" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">' +
       '<polyline fill="none" stroke="#4a90d9" stroke-width="1.5" points="' + points + '"/>' +
@@ -674,6 +671,25 @@
       return '<p style="color: #8899a6; text-align: center;">No statistics available</p>';
     }
 
+    // Calculate global min/max for sparklines (excluding initial 0 rating)
+    var globalMin = Infinity;
+    var globalMax = -Infinity;
+    stats.forEach(function(s) {
+      // Skip the initial rating (index 0) which is misleadingly low
+      var displayHistory = s.ratingHistory.slice(1);
+      if (displayHistory.length > 0) {
+        var playerMin = Math.min.apply(null, displayHistory);
+        var playerMax = Math.max.apply(null, displayHistory);
+        if (playerMin < globalMin) globalMin = playerMin;
+        if (playerMax > globalMax) globalMax = playerMax;
+      }
+    });
+    // Add padding for visual comfort
+    var range = globalMax - globalMin;
+    var padding = range * 0.1;
+    globalMin -= padding;
+    globalMax += padding;
+
     var html = '<div class="player-cards">';
 
     stats.forEach(function(s, idx) {
@@ -689,13 +705,10 @@
       html += '<span class="player-rating">' + s.rating.toFixed(1) + '</span>';
       html += '</div>';
 
-      // Sparkline showing rating progression
-      var ratingMin = s.ratingHistory.length > 0 ? Math.min.apply(null, s.ratingHistory) : 0;
-      var ratingMax = s.ratingHistory.length > 0 ? Math.max.apply(null, s.ratingHistory) : 0;
+      // Sparkline showing rating progression (excluding initial 0 rating)
+      var displayHistory = s.ratingHistory.slice(1);
       html += '<div class="player-sparkline">';
-      html += '<span class="sparkline-min">' + ratingMin.toFixed(1) + '</span>';
-      html += buildSparkline(s.ratingHistory, 200, 24);
-      html += '<span class="sparkline-max">' + ratingMax.toFixed(1) + '</span>';
+      html += buildSparkline(displayHistory, 280, 24, globalMin, globalMax);
       html += '</div>';
 
       // Stats row: games and placements
