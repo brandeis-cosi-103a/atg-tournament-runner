@@ -848,6 +848,38 @@ h1 {
   font-size: 0.9rem;
 }
 
+.player-sparkline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 1rem 0.5rem;
+  background: #252c38;
+  border-bottom: 1px solid #2f3640;
+}
+
+.player-sparkline .sparkline {
+  flex: 1;
+  display: block;
+  height: 24px;
+}
+
+.sparkline-min,
+.sparkline-max {
+  font-size: 0.65rem;
+  color: #6b7785;
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+}
+
+.sparkline-min {
+  text-align: right;
+}
+
+.sparkline-max {
+  text-align: left;
+  color: #4a90d9;
+}
+
 .player-card-stats {
   display: flex;
   padding: 0.75rem 1rem;

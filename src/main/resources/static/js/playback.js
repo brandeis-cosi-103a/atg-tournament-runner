@@ -485,8 +485,15 @@
         bestScore: -Infinity,
         worstScore: Infinity,
         beatCount: {},  // Who this player beat (id -> count)
-        lostCount: {}   // Who beat this player (id -> count)
+        lostCount: {},  // Who beat this player (id -> count)
+        ratingHistory: [initialRating]  // Rating progression over time
       };
+    });
+
+    // Track last known rating per player for history
+    var lastRatings = {};
+    tape.players.forEach(function(p) {
+      lastRatings[p.id] = initialRating;
     });
 
     // Process each game event
@@ -544,6 +551,17 @@
             stats[lower.id].lostCount[higher.id]++;
           }
         }
+      }
+
+      // Record rating history for players in this game
+      if (ev.ratings) {
+        places.forEach(function(p) {
+          var rating = ev.ratings[p.id];
+          if (rating !== undefined && rating !== lastRatings[p.id]) {
+            stats[p.id].ratingHistory.push(rating);
+            lastRatings[p.id] = rating;
+          }
+        });
       }
     });
 
@@ -618,6 +636,49 @@
   }
 
   /**
+   * Build an SVG sparkline from rating history
+   */
+  function buildSparkline(history, width, height) {
+    if (!history || history.length < 2) {
+      return '<svg class="sparkline" width="' + width + '" height="' + height + '"></svg>';
+    }
+
+    var min = Math.min.apply(null, history);
+    var max = Math.max.apply(null, history);
+    var range = max - min;
+
+    // Handle case where all values are the same
+    if (range === 0) {
+      var y = height / 2;
+      return '<svg class="sparkline" width="' + width + '" height="' + height + '">' +
+        '<line x1="0" y1="' + y + '" x2="' + width + '" y2="' + y + '" stroke="#4a90d9" stroke-width="1.5"/>' +
+        '</svg>';
+    }
+
+    // Add padding to min/max for visual comfort
+    var padding = range * 0.1;
+    min -= padding;
+    max += padding;
+    range = max - min;
+
+    // Build polyline points
+    var points = history.map(function(val, i) {
+      var x = (i / (history.length - 1)) * width;
+      var y = height - ((val - min) / range) * height;
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+
+    // Final point for the dot
+    var lastX = width;
+    var lastY = height - ((history[history.length - 1] - min) / range) * height;
+
+    return '<svg class="sparkline" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">' +
+      '<polyline fill="none" stroke="#4a90d9" stroke-width="1.5" points="' + points + '"/>' +
+      '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="2" fill="#4a90d9"/>' +
+      '</svg>';
+  }
+
+  /**
    * Build the statistics HTML using player cards
    */
   function buildStatsTableHtml() {
@@ -640,6 +701,15 @@
       html += '<span class="player-rank">#' + rank + '</span>';
       html += '<span class="player-name">' + escapeHtml(s.name) + '</span>';
       html += '<span class="player-rating">' + s.rating.toFixed(1) + '</span>';
+      html += '</div>';
+
+      // Sparkline showing rating progression
+      var ratingMin = s.ratingHistory.length > 0 ? Math.min.apply(null, s.ratingHistory) : 0;
+      var ratingMax = s.ratingHistory.length > 0 ? Math.max.apply(null, s.ratingHistory) : 0;
+      html += '<div class="player-sparkline">';
+      html += '<span class="sparkline-min">' + ratingMin.toFixed(1) + '</span>';
+      html += buildSparkline(s.ratingHistory, 200, 24);
+      html += '<span class="sparkline-max">' + ratingMax.toFixed(1) + '</span>';
       html += '</div>';
 
       // Stats row: games and placements
