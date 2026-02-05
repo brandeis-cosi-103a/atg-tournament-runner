@@ -58,45 +58,37 @@ class TrueSkillRatingCalculatorTest {
     }
 
     @Test
-    void tiedPlayers_getUniqueRanks() {
-        // Ties are broken pseudorandomly to ensure TrueSkill convergence
+    void tiedPlayers_getSameRank() {
+        // Tied players should get the same rank
         int[] ranks = TrueSkillRatingCalculator.computeRanks(List.of(
                 new Placement("a", 30),
                 new Placement("b", 30),
                 new Placement("c", 20),
                 new Placement("d", 10)
         ));
-        // Tied players (a, b) get unique ranks 1 and 2 (order is deterministic but pseudorandom)
-        // Non-tied players get ranks 3 and 4
         assertEquals(4, ranks.length);
-        // a and b should have ranks 1 and 2 (in some order)
-        assertTrue((ranks[0] == 1 && ranks[1] == 2) || (ranks[0] == 2 && ranks[1] == 1),
-                "Tied players should get ranks 1 and 2");
+        assertEquals(1, ranks[0], "a should be rank 1");
+        assertEquals(1, ranks[1], "b should be rank 1 (tied with a)");
         assertEquals(3, ranks[2], "c should be rank 3");
         assertEquals(4, ranks[3], "d should be rank 4");
     }
 
     @Test
-    void allTied_getUniqueRanks() {
-        // All ties broken pseudorandomly
+    void allTied_getSameRank() {
+        // All tied players should get rank 1
         int[] ranks = TrueSkillRatingCalculator.computeRanks(List.of(
                 new Placement("a", 20),
                 new Placement("b", 20),
                 new Placement("c", 20)
         ));
-        // All players should get unique ranks 1, 2, 3
-        java.util.Set<Integer> uniqueRanks = new java.util.HashSet<>();
-        for (int r : ranks) {
-            uniqueRanks.add(r);
-        }
-        assertEquals(3, uniqueRanks.size(), "All ranks should be unique");
-        assertTrue(uniqueRanks.contains(1) && uniqueRanks.contains(2) && uniqueRanks.contains(3),
-                "Ranks should be 1, 2, and 3");
+        assertEquals(1, ranks[0], "a should be rank 1");
+        assertEquals(1, ranks[1], "b should be rank 1");
+        assertEquals(1, ranks[2], "c should be rank 1");
     }
 
     @Test
-    void tieBreaking_isDeterministic() {
-        // Same input should always produce same output (pseudorandom, not random)
+    void computeRanks_isDeterministic() {
+        // Same input should always produce same output
         List<Placement> placements = List.of(
                 new Placement("alice", 30),
                 new Placement("bob", 30),

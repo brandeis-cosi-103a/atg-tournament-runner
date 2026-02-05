@@ -161,15 +161,22 @@ public final class TapeBuilder {
                         }
                         event.set("placements", placementsArray);
 
-                        // Emit conservative rating (mu - 3*sigma) for display
+                        // Emit ratings: conservative (mu - 3*sigma) for display, plus raw mu/sigma for auditing
                         Map<String, Rating> ratings = tracker.getCurrentRatings();
                         ObjectNode ratingsNode = MAPPER.createObjectNode();
+                        ObjectNode muNode = MAPPER.createObjectNode();
+                        ObjectNode sigmaNode = MAPPER.createObjectNode();
                         for (var entry : ratings.entrySet()) {
-                            double display = tracker.getConservativeRating(entry.getKey());
-                            ratingsNode.put(entry.getKey(),
-                                    Math.round(display * 10.0) / 10.0);
+                            String playerId = entry.getKey();
+                            Rating rating = entry.getValue();
+                            double display = tracker.getConservativeRating(playerId);
+                            ratingsNode.put(playerId, Math.round(display * 10.0) / 10.0);
+                            muNode.put(playerId, Math.round(rating.getMean() * 100.0) / 100.0);
+                            sigmaNode.put(playerId, Math.round(rating.getStandardDeviation() * 100.0) / 100.0);
                         }
                         event.set("ratings", ratingsNode);
+                        event.set("mu", muNode);
+                        event.set("sigma", sigmaNode);
 
                         // Emit cumulative placement points
                         Map<String, Integer> points = tracker.getCurrentPoints();

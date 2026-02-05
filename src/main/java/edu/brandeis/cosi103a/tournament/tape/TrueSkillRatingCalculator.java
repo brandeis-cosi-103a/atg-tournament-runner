@@ -10,12 +10,9 @@ import de.gesundkrank.jskills.TrueSkillCalculator;
 import edu.brandeis.cosi103a.tournament.runner.Placement;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Multiplayer TrueSkill rating calculator using JSkills.
@@ -103,18 +100,11 @@ public final class TrueSkillRatingCalculator {
     }
 
     /**
-     * Compute 1-based ranks from placements, breaking ties randomly.
+     * Compute 1-based ranks from placements, preserving ties.
+     * Players with the same score receive the same rank.
      * Placements can be in any order - this method sorts by score descending.
-     *
-     * JSkills fails to converge when players have tied ranks, so we break ties
-     * using a deterministic pseudorandom shuffle based on the game's player IDs
-     * and scores. This ensures reproducibility while avoiding systematic bias.
      */
     static int[] computeRanks(List<Placement> placements) {
-        // Create seed from game data for reproducible randomness
-        long seed = computeGameSeed(placements);
-        Random random = new Random(seed);
-
         // Create index list sorted by score descending
         List<Integer> sortedByScore = new ArrayList<>();
         for (int i = 0; i < placements.size(); i++) {
@@ -123,41 +113,19 @@ public final class TrueSkillRatingCalculator {
         sortedByScore.sort((a, b) -> Integer.compare(
             placements.get(b).score(), placements.get(a).score()));
 
-        // Build list of indices grouped by score, then shuffle within each group
-        List<Integer> orderedIndices = new ArrayList<>();
-        int i = 0;
-        while (i < sortedByScore.size()) {
-            int idx = sortedByScore.get(i);
-            int score = placements.get(idx).score();
-            List<Integer> tiedIndices = new ArrayList<>();
-            while (i < sortedByScore.size() &&
-                   placements.get(sortedByScore.get(i)).score() == score) {
-                tiedIndices.add(sortedByScore.get(i));
-                i++;
-            }
-            // Shuffle tied players randomly
-            Collections.shuffle(tiedIndices, random);
-            orderedIndices.addAll(tiedIndices);
-        }
-
-        // Assign unique ranks based on shuffled order
+        // Assign ranks, with ties sharing the same rank
         int[] ranks = new int[placements.size()];
-        for (int r = 0; r < orderedIndices.size(); r++) {
-            ranks[orderedIndices.get(r)] = r + 1;  // 1-based ranks
+        int currentRank = 1;
+        for (int i = 0; i < sortedByScore.size(); i++) {
+            int idx = sortedByScore.get(i);
+            if (i > 0) {
+                int prevIdx = sortedByScore.get(i - 1);
+                if (placements.get(idx).score() < placements.get(prevIdx).score()) {
+                    currentRank = i + 1;
+                }
+            }
+            ranks[idx] = currentRank;
         }
         return ranks;
-    }
-
-    /**
-     * Compute a deterministic seed from game data for reproducible tie-breaking.
-     * Uses player IDs and scores to ensure same game always breaks ties the same way.
-     */
-    private static long computeGameSeed(List<Placement> placements) {
-        long seed = 0;
-        for (Placement p : placements) {
-            seed = seed * 31 + p.playerId().hashCode();
-            seed = seed * 31 + p.score();
-        }
-        return seed;
     }
 }
