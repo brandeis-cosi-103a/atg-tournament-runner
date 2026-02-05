@@ -15,6 +15,11 @@
   }
   document.getElementById('title').textContent = tournamentName;
 
+  // Set up download button
+  var downloadBtn = document.getElementById('download-btn');
+  downloadBtn.href = '/api/tournaments/' + encodeURIComponent(tournamentName) + '/download.zip';
+  downloadBtn.classList.remove('hidden');
+
   // State
   let tape = null;
   let currentIndex = -1;

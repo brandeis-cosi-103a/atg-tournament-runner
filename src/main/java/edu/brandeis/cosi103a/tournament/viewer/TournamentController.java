@@ -6,6 +6,7 @@ import edu.brandeis.cosi103a.tournament.runner.PlayerConfig;
 import edu.brandeis.cosi103a.tournament.runner.PlayerDiscoveryService;
 import edu.brandeis.cosi103a.tournament.runner.TournamentConfig;
 import edu.brandeis.cosi103a.tournament.viewer.dto.TournamentConfigRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -165,6 +166,17 @@ public class TournamentController {
 
     private String generatePlayerId(String name) {
         return name.toLowerCase().replaceAll("[^a-z0-9]", "-");
+    }
+
+    /**
+     * Downloads tournament data as a ZIP file.
+     * Includes tournament.json and all round-*.json files, but excludes tape.json (derivative data).
+     */
+    @GetMapping("/{name}/download.zip")
+    public void downloadTournamentData(
+            @PathVariable String name,
+            HttpServletResponse response) throws IOException {
+        tournamentService.writeTournamentZip(name, response);
     }
 
     @ExceptionHandler(TournamentNotFoundException.class)

@@ -237,6 +237,28 @@ h1 {
   text-decoration: underline;
 }
 
+/* Nav bar */
+.nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.download-link {
+  color: #4a90d9;
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.download-link:hover {
+  text-decoration: underline;
+}
+
+.download-link.hidden {
+  display: none;
+}
+
 /* Celebration / Podium */
 .celebration {
   position: fixed;
