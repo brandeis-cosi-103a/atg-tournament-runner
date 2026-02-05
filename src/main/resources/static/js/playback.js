@@ -257,15 +257,13 @@
     initialRating = tape.scoring && tape.scoring.initial ? tape.scoring.initial : 0;
     BarChart.init(document.getElementById('chart-area'), tape.players, initialRating);
 
-    var ratings = {};
-    tape.players.forEach(function(p) { ratings[p.id] = initialRating; });
-    BarChart.update(ratings, null);
-
     placeRoundMarkers();
 
-    currentIndex = -1;
-    celebrationShown = false;
-    document.getElementById('timeline-progress').style.width = '0%';
+    // Jump to end and show final state immediately for completed tournaments
+    currentIndex = tape.events.length - 1;
+    celebrationShown = true;
+    renderEvent(currentIndex);
+    renderStatsTable();
 
     requestAnimationFrame(tick);
   }
@@ -472,7 +470,7 @@
         worstScore: Infinity,
         beatCount: {},  // Who this player beat (id -> count)
         lostCount: {},  // Who beat this player (id -> count)
-        ratingHistory: [initialRating]  // Rating progression over time
+        ratingHistory: []  // Rating progression: [{game, rating}, ...]
       };
     });
 
@@ -480,6 +478,12 @@
     var lastRatings = {};
     tape.players.forEach(function(p) {
       lastRatings[p.id] = initialRating;
+    });
+
+    // Track game count per player
+    var gameCount = {};
+    tape.players.forEach(function(p) {
+      gameCount[p.id] = 0;
     });
 
     // Process each game event
@@ -542,9 +546,10 @@
       // Record rating history for players in this game
       if (ev.ratings) {
         places.forEach(function(p) {
+          gameCount[p.id]++;
           var rating = ev.ratings[p.id];
-          if (rating !== undefined && rating !== lastRatings[p.id]) {
-            stats[p.id].ratingHistory.push(rating);
+          if (rating !== undefined) {
+            stats[p.id].ratingHistory.push({ game: gameCount[p.id], rating: rating });
             lastRatings[p.id] = rating;
           }
         });
@@ -623,7 +628,7 @@
 
   /**
    * Build an SVG sparkline from rating history
-   * @param history - array of rating values
+   * @param history - array of {game, rating} objects
    * @param width - SVG width
    * @param height - SVG height
    * @param globalMin - shared minimum for consistent scale across sparklines
@@ -645,19 +650,28 @@
     }
 
     // Build polyline points
-    var points = history.map(function(val, i) {
+    var points = history.map(function(pt, i) {
       var x = (i / (history.length - 1)) * width;
-      var y = height - ((val - globalMin) / range) * height;
+      var y = height - ((pt.rating - globalMin) / range) * height;
       return x.toFixed(1) + ',' + y.toFixed(1);
     }).join(' ');
 
-    // Final point for the dot
+    // Build invisible hover circles with tooltips
+    var circles = history.map(function(pt, i) {
+      var x = (i / (history.length - 1)) * width;
+      var y = height - ((pt.rating - globalMin) / range) * height;
+      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="6" fill="transparent" class="sparkline-hover">' +
+        '<title>Game ' + pt.game + ': ' + pt.rating.toFixed(1) + '</title></circle>';
+    }).join('');
+
+    // Final point dot
     var lastX = width;
-    var lastY = height - ((history[history.length - 1] - globalMin) / range) * height;
+    var lastY = height - ((history[history.length - 1].rating - globalMin) / range) * height;
 
     return '<svg class="sparkline" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">' +
       '<polyline fill="none" stroke="#4a90d9" stroke-width="1.5" points="' + points + '"/>' +
       '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="2" fill="#4a90d9"/>' +
+      circles +
       '</svg>';
   }
 
@@ -671,17 +685,18 @@
       return '<p style="color: #8899a6; text-align: center;">No statistics available</p>';
     }
 
-    // Calculate global min/max for sparklines (excluding initial 0 rating)
+    // Calculate global min/max for sparklines
+    // Drop first 10% of each player's history to avoid initial rating jump
     var globalMin = Infinity;
     var globalMax = -Infinity;
     stats.forEach(function(s) {
-      // Skip the initial rating (index 0) which is misleadingly low
-      var displayHistory = s.ratingHistory.slice(1);
+      var skipCount = Math.ceil(s.ratingHistory.length * 0.1);
+      var displayHistory = s.ratingHistory.slice(skipCount);
       if (displayHistory.length > 0) {
-        var playerMin = Math.min.apply(null, displayHistory);
-        var playerMax = Math.max.apply(null, displayHistory);
-        if (playerMin < globalMin) globalMin = playerMin;
-        if (playerMax > globalMax) globalMax = playerMax;
+        displayHistory.forEach(function(pt) {
+          if (pt.rating < globalMin) globalMin = pt.rating;
+          if (pt.rating > globalMax) globalMax = pt.rating;
+        });
       }
     });
     // Add padding for visual comfort
@@ -705,8 +720,9 @@
       html += '<span class="player-rating">' + s.rating.toFixed(1) + '</span>';
       html += '</div>';
 
-      // Sparkline showing rating progression (excluding initial 0 rating)
-      var displayHistory = s.ratingHistory.slice(1);
+      // Sparkline showing rating progression (drop first 10% to avoid initial jump)
+      var skipCount = Math.ceil(s.ratingHistory.length * 0.1);
+      var displayHistory = s.ratingHistory.slice(skipCount);
       html += '<div class="player-sparkline">';
       html += buildSparkline(displayHistory, 280, 24, globalMin, globalMax);
       html += '</div>';

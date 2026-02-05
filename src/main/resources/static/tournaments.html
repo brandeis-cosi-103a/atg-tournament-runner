@@ -5,29 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tournament Viewer</title>
   <link rel="stylesheet" href="/css/tournament.css">
-  <style>
-    .nav-links {
-      margin-bottom: 1.5rem;
-    }
-
-    .nav-links a {
-      color: #4a90d9;
-      text-decoration: none;
-      font-size: 0.875rem;
-      margin-right: 1rem;
-    }
-
-    .nav-links a:hover {
-      text-decoration: underline;
-    }
-  </style>
 </head>
 <body>
+  <nav class="site-nav">
+    <a href="/tournaments.html" class="active">Tournaments</a>
+    <a href="/">Create</a>
+  </nav>
   <div class="container">
-    <div class="nav-links">
-      <a href="/">Create Tournament</a>
-    </div>
-
     <h1>Tournaments</h1>
     <div id="tournament-list" class="tournament-list">
       <p class="loading">Loading tournaments...</p>
