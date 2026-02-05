@@ -245,17 +245,27 @@ h1 {
   margin-bottom: 1rem;
 }
 
-.download-link {
+.download-btn {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #1a1f26;
+  border: 1px solid #2f3640;
+  border-radius: 8px;
   color: #4a90d9;
   text-decoration: none;
+  text-align: center;
   font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.download-link:hover {
-  text-decoration: underline;
+.download-btn:hover {
+  background: #1e2530;
+  border-color: #4a90d9;
 }
 
-.download-link.hidden {
+.download-btn.hidden {
   display: none;
 }
 
@@ -490,71 +500,7 @@ h1 {
 .change.negative { color: red; }
 .change.neutral { color: gray; }
 
-/* Tournament Statistics Panel */
-.stats-toggle {
-  margin-top: 2rem;
-  padding: 0.75rem 1.5rem;
-  background: #1a1f26;
-  border: 1px solid #2f3640;
-  border-radius: 8px;
-  color: #4a90d9;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  z-index: 10;
-  transition: background 0.2s, border-color 0.2s;
-  opacity: 0;
-  visibility: hidden;
-}
-
-.celebration.revealed .stats-toggle {
-  opacity: 1;
-  visibility: visible;
-  animation: fadeIn 0.5s ease 3s forwards;
-}
-
-.stats-toggle:hover {
-  background: #1e2530;
-  border-color: #4a90d9;
-}
-
-.stats-toggle .toggle-icon {
-  transition: transform 0.3s ease;
-}
-
-.stats-toggle.expanded .toggle-icon {
-  transform: rotate(180deg);
-}
-
-.stats-panel {
-  margin-top: 0.5rem;
-  max-height: 400px;
-  overflow-y: auto;
-  background: #1a1f26;
-  border: 1px solid #2f3640;
-  border-radius: 8px;
-  z-index: 10;
-  animation: slideDown 0.3s ease;
-}
-
-.stats-panel.hidden {
-  display: none;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    max-height: 0;
-  }
-  to {
-    opacity: 1;
-    max-height: 400px;
-  }
-}
-
+/* Tournament Statistics */
 .stats-table-container {
   padding: 1rem;
 }

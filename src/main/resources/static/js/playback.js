@@ -441,20 +441,6 @@
     }
   }
 
-  // Stats panel toggle
-  document.getElementById('stats-toggle').addEventListener('click', function(e) {
-    e.stopPropagation(); // Don't dismiss celebration
-    var toggle = document.getElementById('stats-toggle');
-    var panel = document.getElementById('stats-panel');
-    toggle.classList.toggle('expanded');
-    panel.classList.toggle('hidden');
-  });
-
-  // Prevent clicks inside stats panel from dismissing celebration
-  document.getElementById('stats-panel').addEventListener('click', function(e) {
-    e.stopPropagation();
-  });
-
   // Main page stats toggle
   document.getElementById('main-stats-toggle').addEventListener('click', function() {
     var toggle = document.getElementById('main-stats-toggle');
@@ -774,15 +760,10 @@
   }
 
   /**
-   * Render the statistics table to both celebration overlay and main page
+   * Render the statistics table to main page
    */
   function renderStatsTable() {
     var html = buildStatsTableHtml();
-
-    // Render to celebration overlay
-    document.getElementById('stats-table-container').innerHTML = html;
-
-    // Render to main page and show the section
     document.getElementById('main-stats-table-container').innerHTML = html;
     document.getElementById('main-stats-section').classList.remove('hidden');
   }
