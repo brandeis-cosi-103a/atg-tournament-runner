@@ -125,6 +125,38 @@
     </dependency>
   </dependencies>
 
+  <profiles>
+    <!-- Run the throughput benchmark: mvn test -Pbenchmark -->
+    <profile>
+      <id>benchmark</id>
+      <dependencies>
+        <dependency>
+          <groupId>edu.brandeis.cosi103a</groupId>
+          <artifactId>engine</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>**/ThroughputBenchmark.java</include>
+              </includes>
+              <properties>
+                <configurationParameters>
+                  junit.jupiter.conditions.deactivate = org.junit.*DisabledCondition
+                </configurationParameters>
+              </properties>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
   <build>
     <plugins>
       <plugin>

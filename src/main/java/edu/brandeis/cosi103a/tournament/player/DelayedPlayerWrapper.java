@@ -59,7 +59,30 @@ public class DelayedPlayerWrapper implements Player {
 
     @Override
     public Optional<GameObserver> getObserver() {
-        return delegate.getObserver();
+        return delegate.getObserver().map(obs -> new DelayedObserver(obs));
+    }
+
+    /**
+     * Observer wrapper that adds the same latency simulation to event notifications.
+     */
+    private class DelayedObserver implements GameObserver {
+        private final GameObserver delegate;
+
+        DelayedObserver(GameObserver delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void notifyEvent(GameState state, Event event) {
+            int delay = minDelayMs + random.nextInt(maxDelayMs - minDelayMs + 1);
+            try {
+                Thread.sleep(delay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            delegate.notifyEvent(state, event);
+        }
     }
 
     @Override

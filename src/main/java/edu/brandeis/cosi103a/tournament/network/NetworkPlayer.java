@@ -78,6 +78,9 @@ public class NetworkPlayer implements Player {
 
     @Override
     public Decision makeDecision(GameState state, ImmutableList<Decision> options, Optional<Event> event) {
+        // Ensure all async event notifications have been delivered before deciding
+        observer.flush();
+
         try {
             // Create request DTO
             DecisionRequest request = new DecisionRequest(state, options, event, playerUuid);
