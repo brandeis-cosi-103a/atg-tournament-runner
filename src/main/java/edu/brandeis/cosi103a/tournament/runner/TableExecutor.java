@@ -24,16 +24,6 @@ public class TableExecutor {
     private final PlayerDiscoveryService discoveryService;
 
     /**
-     * Creates a TableExecutor with the given engine loader.
-     * Uses no discovery service (backward compatibility for CLI mode).
-     *
-     * @param engineLoader the loader for creating Engine instances
-     */
-    public TableExecutor(EngineLoader engineLoader) {
-        this(engineLoader, null);
-    }
-
-    /**
      * Creates a TableExecutor with the given engine loader and discovery service.
      *
      * @param engineLoader     the loader for creating Engine instances
