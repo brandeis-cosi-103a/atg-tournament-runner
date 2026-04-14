@@ -12,6 +12,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -28,6 +29,8 @@ public class TournamentExecutionService {
     private final SimpMessagingTemplate messagingTemplate;
     private final PlayerDiscoveryService playerDiscoveryService;
     private final int gameThreadPoolSize;
+    private final int perCallTimeoutSeconds;
+    private final int gameBudgetSeconds;
 
     /**
      * Progress listener callback interface for tournament execution.
@@ -39,10 +42,14 @@ public class TournamentExecutionService {
     public TournamentExecutionService(
             @Value("${tournament.data-dir:./data}") String dataDir,
             @Value("${tournament.game-thread-pool-size:64}") int gameThreadPoolSize,
+            @Value("${tournament.per-call-timeout-seconds:0}") int perCallTimeoutSeconds,
+            @Value("${tournament.game-budget-seconds:0}") int gameBudgetSeconds,
             SimpMessagingTemplate messagingTemplate,
             PlayerDiscoveryService playerDiscoveryService) {
         this.dataDir = Path.of(dataDir);
         this.gameThreadPoolSize = gameThreadPoolSize;
+        this.perCallTimeoutSeconds = perCallTimeoutSeconds;
+        this.gameBudgetSeconds = gameBudgetSeconds;
         this.messagingTemplate = messagingTemplate;
         this.playerDiscoveryService = playerDiscoveryService;
         this.executorService = Executors.newFixedThreadPool(
@@ -354,6 +361,10 @@ public class TournamentExecutionService {
      * @return a TableExecutor instance
      */
     protected TableExecutor createTableExecutor(EngineLoader engineLoader) {
+        if (perCallTimeoutSeconds > 0 && gameBudgetSeconds > 0) {
+            return new TableExecutor(engineLoader, playerDiscoveryService,
+                Duration.ofSeconds(perCallTimeoutSeconds), Duration.ofSeconds(gameBudgetSeconds));
+        }
         return new TableExecutor(engineLoader, playerDiscoveryService);
     }
 

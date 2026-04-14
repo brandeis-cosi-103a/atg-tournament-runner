@@ -18,6 +18,9 @@ release.properties
 .DS_Store
 Thumbs.db
 
+# Compiled classes
+*.class
+
 # Test output
 *.log
 results/

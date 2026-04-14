@@ -108,13 +108,13 @@ public class DelayedTournamentIntegrationTest {
         PlayerDiscoveryService discoveryService = new PlayerDiscoveryService();
 
         TournamentExecutionService service = withDelay
-            ? new TournamentExecutionService(dataDir.toString(), 8, messaging, discoveryService) {
+            ? new TournamentExecutionService(dataDir.toString(), 8, 0, 0, messaging, discoveryService) {
                 @Override
                 protected TableExecutor createTableExecutor(EngineLoader loader) {
                     return new DelayedTableExecutor(loader, MIN_DELAY_MS, MAX_DELAY_MS);
                 }
             }
-            : new TournamentExecutionService(dataDir.toString(), 8, messaging, discoveryService);
+            : new TournamentExecutionService(dataDir.toString(), 8, 0, 0, messaging, discoveryService);
 
         try {
             service.startTournament(config, engineLoader, status -> {
