@@ -45,7 +45,7 @@ public class DelayedTournamentIntegrationTest {
         private final int maxDelayMs;
 
         DelayedTableExecutor(EngineLoader loader, int minDelayMs, int maxDelayMs) {
-            super(loader);
+            super(loader, null);
             this.minDelayMs = minDelayMs;
             this.maxDelayMs = maxDelayMs;
         }

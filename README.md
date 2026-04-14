@@ -18,14 +18,14 @@ A tournament consists of multiple **rounds**. Each round:
 
 1. **Kingdom Selection**: 10 action cards are randomly selected from the 15 available types
 2. **Table Assignment**: Players are randomly shuffled into tables of 3-4 players
-3. **Games**: Each table plays N games (specified by `--games-per-table`) with the same kingdom and grouping
+3. **Games**: Each table plays one game with the same kingdom and grouping
 4. **Recording**: Results are written to a round file
 
 Tables within a round run in parallel for efficiency.
 
 ### Scoring
 
-Each game records the **final VP score** for every player. The output includes raw scores only - no rankings or ratings are computed by this tool.
+Each game records the **final VP score** for every player. The output files include raw scores; TrueSkill ratings are computed live during tournament execution and displayed in the web UI.
 
 Example game outcome:
 ```json
@@ -51,13 +51,13 @@ If a game fails (engine error, player violation, timeout), all players in that g
 - **Your engine JAR** - a packaged JAR containing your `Engine` implementation
 - **Network player deployed** (optional) - if testing against your own player, it must be accessible via HTTP
 
-## Quick Start (Web UI - Recommended)
+## Quick Start
 
-Run tournaments with an easy-to-use web interface:
+Run tournaments with the web interface:
 
 ```bash
 docker run --rm \
-  -p 8080:8080 \
+  -p 8081:8081 \
   -v $(pwd)/my-engine.jar:/app/engine.jar \
   -v $(pwd)/data:/app/data \
   -e TOURNAMENT_ENGINE_JAR=/app/engine.jar \
@@ -65,103 +65,41 @@ docker run --rm \
   ghcr.io/brandeis-cosi-103a/atg-tournament-runner
 ```
 
-Then open **http://localhost:8080** in your browser to:
-1. Configure your tournament (name, rounds, games per table)
-2. Add players (network URLs or built-in bots)
-3. Click "Run Tournament" and track progress (rounds, games completed)
+Then open **http://localhost:8081** in your browser to:
+1. Configure your tournament (name, rounds, games per player)
+2. Add players (network URLs or built-in bots from the dropdown)
+3. Click "Run Tournament" and track progress with live TrueSkill ratings
 4. View animated results playback automatically when complete
 
-**No complex CLI commands needed!**
+### Built-in Bots
 
-## Quick Start (CLI - Advanced)
+Three built-in bot players are always available in the web UI dropdown:
 
-For automated scripts or CI/CD pipelines, use the command-line interface:
+| Bot | Strategy |
+|-----|----------|
+| **NaiveBigMoneyPlayer** | Buys the highest-cost money card it can afford, buys Framework when possible |
+| **ActionHeavyPlayer** | Prioritizes action cards over money, plays all available actions |
+| **RandomPlayer** | Completely random legal decisions — useful as a baseline |
 
-```bash
-docker run --rm \
-  -v $(pwd):/jars \
-  -v $(pwd)/results:/data \
-  ghcr.io/brandeis-cosi-103a/atg-tournament-runner \
-  /jars/my-engine.jar com.example.MyEngine \
-  --name practice --rounds 3 --games-per-table 10 \
-  --output /data \
-  --player Student=https://my-player.azurewebsites.net \
-  --player Bot1=naive-money \
-  --player Bot2=action-heavy \
-  --player Bot3=random
-```
+### Adding Your Own Player JARs
 
-## CLI Usage (Advanced)
-
-For automation, scripting, or CI/CD integration, use the command-line interface:
-
-```
-docker run --rm \
-  -v <path-to-jars>:/jars \
-  -v <output-dir>:/data \
-  ghcr.io/brandeis-cosi-103a/atg-tournament-runner \
-  <engine-jar> <engine-class> [options]
-```
-
-### Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `<engine-jar>` | Path to your engine JAR file (inside the container) |
-| `<engine-class>` | Fully-qualified class name of your Engine implementation |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `--name <name>` | Tournament name (required) |
-| `--rounds <n>` | Number of rounds to play (required) |
-| `--games-per-table <n>` | Games per table per round (required) |
-| `--output <dir>` | Output directory (default: ./data) |
-| `--max-turns <n>` | Max turns per game (default: 100) |
-| `--player <Name>=<url>` | Add a player (at least 3 required) |
-
-### Player Types
-
-| Value | Description |
-|-------|-------------|
-| `https://...` | Network player URL |
-| `naive-money` | Built-in naive "big money" strategy bot |
-| `action-heavy` | Built-in action-focused strategy bot |
-| `random` | Built-in random decision bot |
-
-## CLI Usage Examples
-
-### Testing against all bots
+To make additional `Player` implementations available as bots, add their JARs to the classpath. Any class implementing the `Player` interface with a zero-arg or `String` constructor is automatically discovered and appears in the web UI dropdown.
 
 ```bash
 docker run --rm \
-  -v $(pwd):/jars \
-  -v $(pwd)/results:/data \
-  ghcr.io/brandeis-cosi-103a/atg-tournament-runner \
-  /jars/my-engine.jar com.example.MyEngine \
-  --name bot-test --rounds 5 --games-per-table 20 \
-  --output /data \
-  --player NaiveMoney=naive-money \
-  --player ActionHeavy=action-heavy \
-  --player Random=random
+  -p 8081:8081 \
+  -v $(pwd)/my-engine.jar:/app/engine.jar \
+  -v $(pwd)/my-player.jar:/app/player.jar \
+  -v $(pwd)/data:/app/data \
+  -e TOURNAMENT_ENGINE_JAR=/app/engine.jar \
+  -e TOURNAMENT_ENGINE_CLASS=com.example.MyEngine \
+  -e CLASSPATH=/app/runner.jar:/app/player.jar \
+  ghcr.io/brandeis-cosi-103a/atg-tournament-runner
 ```
 
-### Larger tournament with network player
+### Network Players
 
-```bash
-docker run --rm \
-  -v $(pwd):/jars \
-  -v $(pwd)/results:/data \
-  ghcr.io/brandeis-cosi-103a/atg-tournament-runner \
-  /jars/my-engine.jar com.example.MyEngine \
-  --name full-test --rounds 15 --games-per-table 50 \
-  --output /data \
-  --player MyPlayer=https://my-player.azurewebsites.net \
-  --player Bot1=naive-money \
-  --player Bot2=action-heavy \
-  --player Bot3=random
-```
+To include a network player, select "URL (Network Player)" from the dropdown and enter the player's base URL (e.g., `https://my-player.azurewebsites.net`). The server must expose `/decide` and `/log-event` endpoints.
 
 ## Output Format
 
@@ -220,29 +158,26 @@ Results are written to the output directory:
 
 ### Resume Support
 
-If a tournament is interrupted, re-running with the same `--name` will skip rounds that already have output files and continue from where it left off.
+If a tournament is interrupted, re-running with the same tournament name will skip rounds that already have output files and continue from where it left off.
 
-## Bot Strategies
+## Bot Strategy Details
 
-### naive-money
+### NaiveBigMoneyPlayer
 
-A simple money-focused strategy:
 - Buys the highest-cost money card it can afford
 - Buys Framework cards when possible
 - Plays some action cards that provide money bonuses
 - No complex decision-making or expected value calculations
 
-### action-heavy
+### ActionHeavyPlayer
 
-An action card enthusiast:
 - Prioritizes buying action cards over money
 - Plays all available action cards
 - Falls back to money and Framework cards when no actions available
 - Doesn't optimize for card synergies
 
-### random
+### RandomPlayer
 
-Completely random legal decisions:
 - Chooses uniformly at random from available options
 - Useful as a baseline for comparison
 
@@ -258,7 +193,6 @@ Completely random legal decisions:
 
 - Network players have a 5-second timeout for event logging
 - If games are timing out, check your engine's turn limit handling
-- Consider using `--max-turns` to limit game length
 
 ### Engine class not found
 
@@ -273,50 +207,16 @@ Completely random legal decisions:
 
 ## Viewing Results
 
-### Web UI (Automatic)
-
-When using the web UI, you get automatic progress tracking and results playback:
-- **Progress tracking**: Live updates showing current round and games completed
-- **Auto-redirect**: Automatically opens the animated results viewer when finished
-- **Animated playback**: Watch TrueSkill ratings evolve game-by-game with playback controls
-- **TrueSkill ratings**: Tape file with ratings is generated automatically
-
-The tournament runs to completion, then plays back all results with full animation!
-
-### CLI (Manual)
-
-If you ran a tournament via CLI, you need to manually build the tape and start the viewer:
-
-**1. Build the tape file:**
-```bash
-java -cp target/atg-tournament-runner-*-shaded.jar \
-  edu.brandeis.cosi103a.tournament.tape.TapeBuilder \
-  --tournament ./data/my-tournament
-```
-
-This generates `tape.json` with TrueSkill ratings.
-
-**2. Start the viewer:**
-```bash
-# Using Docker
-docker run --rm \
-  -v $(pwd)/data:/app/data \
-  -p 8080:8080 \
-  ghcr.io/brandeis-cosi-103a/atg-tournament-runner
-
-# Using Java directly
-java -jar target/atg-tournament-runner-*-shaded.jar
-```
-
-Then open **http://localhost:8080** and select your tournament.
-
-### Viewer Features
-
+The web UI provides automatic progress tracking and results playback:
+- **Live progress**: Real-time updates showing current round, games completed, and TrueSkill ratings
+- **Auto-redirect**: Automatically opens the animated results viewer when the tournament finishes
 - **Animated leaderboard**: Watch ratings evolve game-by-game
 - **Playback controls**: Play/pause, rewind, fast-forward (1x to 50x speed)
 - **Timeline scrubber**: Click anywhere to jump to a specific game
 - **Round markers**: Visual indicators of round boundaries
 - **Podium celebration**: Final standings at tournament end
+
+Previously completed tournaments can also be viewed by selecting them from the main page.
 
 ## Important Notes
 
