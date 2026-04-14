@@ -14,6 +14,7 @@ import edu.brandeis.cosi103a.tournament.network.dto.DecisionResponse;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,6 +29,7 @@ public class NetworkPlayer implements Player {
     private final HttpClientWrapper httpClient;
     private final ObjectMapper objectMapper;
     private final NetworkGameObserver observer;
+    private final Duration requestTimeout;
 
     /**
      * Constructor for NetworkPlayer.
@@ -36,14 +38,23 @@ public class NetworkPlayer implements Player {
      * @param serverUrl The base URL of the network player server (e.g., "http://localhost:8080")
      */
     public NetworkPlayer(String name, String serverUrl) {
+        this(name, serverUrl, null);
+    }
+
+    /**
+     * Constructor for NetworkPlayer with per-request timeout.
+     *
+     * @param name The name of this player
+     * @param serverUrl The base URL of the network player server
+     * @param requestTimeout timeout for each /decide HTTP request (null for no timeout)
+     */
+    public NetworkPlayer(String name, String serverUrl, Duration requestTimeout) {
         this.name = name;
         this.serverUrl = serverUrl.endsWith("/") ? serverUrl.substring(0, serverUrl.length() - 1) : serverUrl;
         this.playerUuid = UUID.randomUUID().toString();
         this.httpClient = new HttpClientWrapper.Default();
-
-        // Use shared ObjectMapper configuration
         this.objectMapper = ObjectMapperFactory.create();
-
+        this.requestTimeout = requestTimeout;
         this.observer = new NetworkGameObserver(this.serverUrl, this.playerUuid, this.httpClient, this.objectMapper);
     }
 
@@ -56,6 +67,7 @@ public class NetworkPlayer implements Player {
         this.playerUuid = UUID.randomUUID().toString();
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
+        this.requestTimeout = null;
         this.observer = new NetworkGameObserver(this.serverUrl, this.playerUuid, this.httpClient, this.objectMapper);
     }
 
@@ -72,11 +84,14 @@ public class NetworkPlayer implements Player {
             String requestJson = objectMapper.writeValueAsString(request);
 
             // Build HTTP request
-            HttpRequest httpRequest = HttpRequest.newBuilder()
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(serverUrl + "/decide"))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(requestJson))
-                    .build();
+                    .POST(HttpRequest.BodyPublishers.ofString(requestJson));
+            if (requestTimeout != null) {
+                requestBuilder.timeout(requestTimeout);
+            }
+            HttpRequest httpRequest = requestBuilder.build();
 
             // Send request and get response
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());

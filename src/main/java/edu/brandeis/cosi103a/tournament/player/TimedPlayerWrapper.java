@@ -2,12 +2,7 @@ package edu.brandeis.cosi103a.tournament.player;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import com.google.common.collect.ImmutableList;
 import edu.brandeis.cosi.atg.decisions.Decision;
@@ -18,29 +13,27 @@ import edu.brandeis.cosi.atg.player.Player;
 import edu.brandeis.cosi.atg.state.GameState;
 
 /**
- * A Player decorator that enforces per-decision timeouts and per-game
- * cumulative time budgets.
+ * A Player decorator that tracks cumulative decision time against a per-game
+ * budget and auto-forfeits when exceeded.
  *
- * <p>Each call to {@link #makeDecision} is executed on a background thread
- * with a per-call timeout. Elapsed time is tracked cumulatively against a
- * per-game budget. When the budget is exceeded, the wrapper automatically
- * forfeits by returning an {@link EndPhaseDecision} (or the first available
- * option for forced decisions where no EndPhaseDecision exists).
+ * <p>This wrapper does NOT enforce per-call timeouts — that responsibility
+ * belongs to the transport layer (e.g., HTTP request timeout on
+ * {@link edu.brandeis.cosi103a.tournament.network.NetworkPlayer}).
+ * This wrapper passively measures elapsed time and catches any exceptions
+ * from the delegate (including timeout exceptions from the network layer)
+ * to return a forfeit decision.
  *
  * <p>Example usage:
  * <pre>
  * Player timed = new TimedPlayerWrapper(
- *     new NaiveBigMoneyPlayer("Bot"),
- *     Duration.ofSeconds(5),
+ *     new NetworkPlayer("Bot", url, requestTimeout),
  *     Duration.ofMinutes(2)
  * );
  * </pre>
  */
 public class TimedPlayerWrapper implements Player {
     private final Player delegate;
-    private final Duration perCallTimeout;
     private final Duration gameBudget;
-    private final ExecutorService executor;
 
     private long totalDecisionTimeMs = 0;
     private int decisionCount = 0;
@@ -51,15 +44,12 @@ public class TimedPlayerWrapper implements Player {
     /**
      * Creates a new TimedPlayerWrapper.
      *
-     * @param delegate       the Player instance to wrap
-     * @param perCallTimeout maximum time allowed for a single makeDecision call
-     * @param gameBudget     maximum cumulative time allowed across all decisions
+     * @param delegate   the Player instance to wrap
+     * @param gameBudget maximum cumulative decision time allowed per game
      */
-    public TimedPlayerWrapper(Player delegate, Duration perCallTimeout, Duration gameBudget) {
+    public TimedPlayerWrapper(Player delegate, Duration gameBudget) {
         this.delegate = delegate;
-        this.perCallTimeout = perCallTimeout;
         this.gameBudget = gameBudget;
-        this.executor = Executors.newSingleThreadExecutor();
     }
 
     @Override
@@ -81,32 +71,15 @@ public class TimedPlayerWrapper implements Player {
             return forfeitDecision(options);
         }
 
-        long startTime = System.nanoTime();
-        Future<Decision> future = executor.submit(() -> delegate.makeDecision(state, options, event));
+        long startNanos = System.nanoTime();
         try {
-            Decision result = future.get(perCallTimeout.toMillis(), TimeUnit.MILLISECONDS);
-            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
-            totalDecisionTimeMs += elapsedMs;
+            Decision result = delegate.makeDecision(state, options, event);
+            totalDecisionTimeMs += TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
             checkBudgetExceeded();
             return result;
-        } catch (TimeoutException e) {
-            // Cancel the still-running delegate task to free the executor thread
-            future.cancel(true);
-            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
-            totalDecisionTimeMs += elapsedMs;
-            timeoutCount++;
-            checkBudgetExceeded();
-            return forfeitDecision(options);
-        } catch (ExecutionException e) {
-            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
-            totalDecisionTimeMs += elapsedMs;
-            timeoutCount++;
-            checkBudgetExceeded();
-            return forfeitDecision(options);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
-            totalDecisionTimeMs += elapsedMs;
+        } catch (Exception e) {
+            // Delegate failed (HTTP timeout, network error, player bug, etc.)
+            totalDecisionTimeMs += TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
             timeoutCount++;
             checkBudgetExceeded();
             return forfeitDecision(options);
@@ -150,13 +123,5 @@ public class TimedPlayerWrapper implements Player {
      */
     public TimingStats getTimingStats() {
         return new TimingStats(totalDecisionTimeMs, decisionCount, timeoutCount, forfeited, decisionAtForfeit);
-    }
-
-    /**
-     * Shuts down the background executor. Should be called when this wrapper
-     * is no longer needed.
-     */
-    public void shutdown() {
-        executor.shutdownNow();
     }
 }

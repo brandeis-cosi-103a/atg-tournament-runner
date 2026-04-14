@@ -12,7 +12,6 @@ import edu.brandeis.cosi.atg.event.Event;
 import edu.brandeis.cosi.atg.event.GameObserver;
 import edu.brandeis.cosi.atg.player.Player;
 import edu.brandeis.cosi.atg.state.GameState;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,10 +19,8 @@ import static org.mockito.Mockito.*;
 
 class TimedPlayerWrapperTest {
 
-    private TimedPlayerWrapper wrapper;
-
     /**
-     * Stub Player implementation for testing. Returns the first option from the list.
+     * Stub Player that returns the first option from the list.
      */
     private static class StubPlayer implements Player {
         private final String name;
@@ -55,7 +52,7 @@ class TimedPlayerWrapperTest {
     }
 
     /**
-     * Stub Player that sleeps for a configurable duration before returning a decision.
+     * Stub Player that sleeps for a configurable duration before returning.
      */
     private static class SlowStubPlayer implements Player {
         private final String name;
@@ -120,17 +117,10 @@ class TimedPlayerWrapperTest {
         }
     }
 
-    @AfterEach
-    void tearDown() {
-        if (wrapper != null) {
-            wrapper.shutdown();
-        }
-    }
-
     @Test
     void getName_delegatesToWrappedPlayer() {
         StubPlayer delegate = new StubPlayer("TestPlayer");
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMinutes(2));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
 
         assertEquals("TestPlayer", wrapper.getName());
     }
@@ -141,7 +131,7 @@ class TimedPlayerWrapperTest {
         GameObserver observer = mock(GameObserver.class);
         when(delegate.getObserver()).thenReturn(Optional.of(observer));
 
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMinutes(2));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
 
         Optional<GameObserver> result = wrapper.getObserver();
         assertTrue(result.isPresent());
@@ -152,7 +142,7 @@ class TimedPlayerWrapperTest {
     @Test
     void makeDecision_withinBudget_delegatesNormally() {
         StubPlayer delegate = new StubPlayer("Bot");
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMinutes(2));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
 
         GameState state = mock(GameState.class);
         EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.ACTION);
@@ -174,51 +164,10 @@ class TimedPlayerWrapperTest {
     }
 
     @Test
-    void makeDecision_perCallTimeout_returnsEndPhaseDecision() {
-        SlowStubPlayer delegate = new SlowStubPlayer("SlowBot", Duration.ofSeconds(2));
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofMillis(100), Duration.ofMinutes(2));
-
-        GameState state = mock(GameState.class);
-        BuyDecision buyDecision = new BuyDecision(Card.Type.MODULE);
-        EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.BUY);
-        ImmutableList<Decision> options = ImmutableList.of(buyDecision, endPhase);
-        Optional<Event> event = Optional.empty();
-
-        Decision result = wrapper.makeDecision(state, options, event);
-
-        // Should return the EndPhaseDecision as forfeit decision
-        assertEquals(endPhase, result);
-
-        TimingStats stats = wrapper.getTimingStats();
-        assertEquals(1, stats.decisionCount());
-        assertEquals(1, stats.timeoutCount());
-    }
-
-    @Test
-    void makeDecision_perCallTimeout_noEndPhaseDecision_returnsFirstOption() {
-        SlowStubPlayer delegate = new SlowStubPlayer("SlowBot", Duration.ofSeconds(2));
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofMillis(100), Duration.ofMinutes(2));
-
-        GameState state = mock(GameState.class);
-        BuyDecision buyDecision1 = new BuyDecision(Card.Type.MODULE);
-        BuyDecision buyDecision2 = new BuyDecision(Card.Type.FRAMEWORK);
-        ImmutableList<Decision> options = ImmutableList.of(buyDecision1, buyDecision2);
-        Optional<Event> event = Optional.empty();
-
-        Decision result = wrapper.makeDecision(state, options, event);
-
-        // No EndPhaseDecision available, should return the first option
-        assertEquals(buyDecision1, result);
-
-        TimingStats stats = wrapper.getTimingStats();
-        assertEquals(1, stats.timeoutCount());
-    }
-
-    @Test
     void makeDecision_budgetExceeded_setsForfeited() {
         // Use a slow player that takes ~150ms per call, with a 200ms budget
         SlowStubPlayer delegate = new SlowStubPlayer("SlowBot", Duration.ofMillis(150));
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMillis(200));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMillis(200));
 
         GameState state = mock(GameState.class);
         EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.ACTION);
@@ -245,7 +194,7 @@ class TimedPlayerWrapperTest {
     void makeDecision_afterForfeit_doesNotCallDelegate() {
         // Use a slow player that takes ~150ms per call, with a 200ms budget
         SlowStubPlayer delegate = new SlowStubPlayer("SlowBot", Duration.ofMillis(150));
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMillis(200));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMillis(200));
 
         GameState state = mock(GameState.class);
         EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.ACTION);
@@ -274,7 +223,7 @@ class TimedPlayerWrapperTest {
     @Test
     void makeDecision_statsAccumulateCorrectly() {
         StubPlayer delegate = new StubPlayer("Bot");
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMinutes(2));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
 
         GameState state = mock(GameState.class);
         EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.ACTION);
@@ -298,7 +247,7 @@ class TimedPlayerWrapperTest {
     @Test
     void makeDecision_delegateException_treatedAsTimeout() {
         ExplodingStubPlayer delegate = new ExplodingStubPlayer("ExplodingBot");
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMinutes(2));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
 
         GameState state = mock(GameState.class);
         EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.ACTION);
@@ -317,9 +266,29 @@ class TimedPlayerWrapperTest {
     }
 
     @Test
+    void makeDecision_delegateException_noEndPhase_returnsFirstOption() {
+        ExplodingStubPlayer delegate = new ExplodingStubPlayer("ExplodingBot");
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
+
+        GameState state = mock(GameState.class);
+        BuyDecision buyDecision1 = new BuyDecision(Card.Type.MODULE);
+        BuyDecision buyDecision2 = new BuyDecision(Card.Type.FRAMEWORK);
+        ImmutableList<Decision> options = ImmutableList.of(buyDecision1, buyDecision2);
+        Optional<Event> event = Optional.empty();
+
+        Decision result = wrapper.makeDecision(state, options, event);
+
+        // No EndPhaseDecision available, should return the first option
+        assertEquals(buyDecision1, result);
+
+        TimingStats stats = wrapper.getTimingStats();
+        assertEquals(1, stats.timeoutCount());
+    }
+
+    @Test
     void getCumulativeTimeMs_tracksElapsedTime() {
         SlowStubPlayer delegate = new SlowStubPlayer("SlowBot", Duration.ofMillis(50));
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMinutes(2));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
 
         GameState state = mock(GameState.class);
         EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.ACTION);
@@ -340,7 +309,7 @@ class TimedPlayerWrapperTest {
     @Test
     void getTimingStats_returnsConsistentSnapshot() {
         StubPlayer delegate = new StubPlayer("Bot");
-        wrapper = new TimedPlayerWrapper(delegate, Duration.ofSeconds(5), Duration.ofMinutes(2));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
 
         TimingStats initial = wrapper.getTimingStats();
         assertEquals(0, initial.totalDecisionTimeMs());

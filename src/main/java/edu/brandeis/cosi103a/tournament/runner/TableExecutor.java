@@ -30,22 +30,18 @@ public class TableExecutor {
     private final Duration gameBudget;
 
     /**
-     * Creates a TableExecutor with the given engine loader and discovery service.
-     * No time budgets are applied.
-     *
-     * @param engineLoader     the loader for creating Engine instances
-     * @param discoveryService the service for discovering classpath players (may be null)
+     * Creates a TableExecutor with no time budgets.
      */
     public TableExecutor(EngineLoader engineLoader, PlayerDiscoveryService discoveryService) {
         this(engineLoader, discoveryService, null, null);
     }
 
     /**
-     * Creates a TableExecutor with optional per-call timeout and game budget.
+     * Creates a TableExecutor with per-call timeout and game budget.
      *
      * @param engineLoader     the loader for creating Engine instances
      * @param discoveryService the service for discovering classpath players (may be null)
-     * @param perCallTimeout   max time per decision call (null to disable)
+     * @param perCallTimeout   HTTP request timeout for network player decisions (null to disable)
      * @param gameBudget       max cumulative decision time per game (null to disable)
      */
     public TableExecutor(EngineLoader engineLoader, PlayerDiscoveryService discoveryService,
@@ -96,12 +92,9 @@ public class TableExecutor {
             } catch (Exception e) {
                 // Game timeout, engine error, or player violation: all players get score 0
                 List<Placement> placements = playerIds.stream()
-                    .map(id -> new Placement(id, 0))
+                    .map(id -> new Placement(id, 0, List.of(), null))
                     .toList();
                 outcomes.add(new GameOutcome(gameIndex, placements));
-            } finally {
-                // Always shut down timed wrappers to release executor threads
-                timedWrappers.values().forEach(TimedPlayerWrapper::shutdown);
             }
         }
 
@@ -116,11 +109,8 @@ public class TableExecutor {
             if (config.delay()) {
                 player = new DelayedPlayerWrapper(player, 2, 5);
             }
-            // Wrap with TimedPlayerWrapper when timeouts are configured
-            // (applied AFTER DelayedPlayerWrapper so delay simulates network,
-            // timing monitors the combined result)
-            if (perCallTimeout != null && gameBudget != null) {
-                TimedPlayerWrapper timed = new TimedPlayerWrapper(player, perCallTimeout, gameBudget);
+            if (gameBudget != null) {
+                TimedPlayerWrapper timed = new TimedPlayerWrapper(player, gameBudget);
                 timedWrappers.put(config.id(), timed);
                 player = timed;
             }
@@ -151,7 +141,7 @@ public class TableExecutor {
         }
 
         // Default: treat as network player URL
-        return new NetworkPlayer(config.name(), url);
+        return new NetworkPlayer(config.name(), url, perCallTimeout);
     }
 
     private Player createFromClassName(String className, String playerName) {
