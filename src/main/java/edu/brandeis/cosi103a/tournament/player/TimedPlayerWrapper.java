@@ -82,49 +82,41 @@ public class TimedPlayerWrapper implements Player {
         }
 
         long startTime = System.nanoTime();
+        Future<Decision> future = executor.submit(() -> delegate.makeDecision(state, options, event));
         try {
-            Future<Decision> future = executor.submit(() -> delegate.makeDecision(state, options, event));
             Decision result = future.get(perCallTimeout.toMillis(), TimeUnit.MILLISECONDS);
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             totalDecisionTimeMs += elapsedMs;
-
-            // Check if cumulative time exceeds game budget
-            if (totalDecisionTimeMs > gameBudget.toMillis()) {
-                forfeited = true;
-                decisionAtForfeit = decisionCount;
-            }
-
+            checkBudgetExceeded();
             return result;
         } catch (TimeoutException e) {
+            // Cancel the still-running delegate task to free the executor thread
+            future.cancel(true);
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             totalDecisionTimeMs += elapsedMs;
             timeoutCount++;
-
-            // Check if cumulative time exceeds game budget
-            if (totalDecisionTimeMs > gameBudget.toMillis()) {
-                forfeited = true;
-                decisionAtForfeit = decisionCount;
-            }
-
+            checkBudgetExceeded();
             return forfeitDecision(options);
         } catch (ExecutionException e) {
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             totalDecisionTimeMs += elapsedMs;
             timeoutCount++;
-
-            // Check if cumulative time exceeds game budget
-            if (totalDecisionTimeMs > gameBudget.toMillis()) {
-                forfeited = true;
-                decisionAtForfeit = decisionCount;
-            }
-
+            checkBudgetExceeded();
             return forfeitDecision(options);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             totalDecisionTimeMs += elapsedMs;
             timeoutCount++;
+            checkBudgetExceeded();
             return forfeitDecision(options);
+        }
+    }
+
+    private void checkBudgetExceeded() {
+        if (!forfeited && totalDecisionTimeMs > gameBudget.toMillis()) {
+            forfeited = true;
+            decisionAtForfeit = decisionCount;
         }
     }
 

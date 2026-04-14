@@ -1,0 +1,10 @@
+{
+  "name": "timed-test",
+  "rounds": 1,
+  "players": [
+    {"id": "p1", "name": "Player 1", "url": "classpath:test", "delay": false},
+    {"id": "p2", "name": "Player 2", "url": "classpath:test", "delay": false},
+    {"id": "p3", "name": "Player 3", "url": "classpath:test", "delay": false},
+    {"id": "p4", "name": "Player 4", "url": "classpath:test", "delay": false}
+  ]
+}
