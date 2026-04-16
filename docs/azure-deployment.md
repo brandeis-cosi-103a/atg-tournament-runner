@@ -81,30 +81,17 @@ az acr login --name $ACR_NAME
 
 ## 4. Deploy Reference Player Server (Optional)
 
-Use this for smoke testing before the real tournament. It serves the BigMoneyPlayer strategy (or whichever `player.type` you configure).
+Use this for smoke testing before the real tournament. A single server instance serves all built-in player types (big-money, tech-debt, attack, random, engine) via path-based routing: `/{playerType}/decide` and `/{playerType}/log-event`. Root `/decide` and `/log-event` default to big-money.
 
 ### 4a. Build and push Docker image
 
-The network-player-server module does not ship its own Dockerfile, so create one in a temporary build context:
+The Dockerfile is at `automation/network-player-server/Dockerfile` in atg-reference-impl.
 
 ```bash
-PLAYER_SERVER_DIR=$(mktemp -d)
+cd /path/to/atg-reference-impl/automation/network-player-server
 
-cp /path/to/atg-reference-impl/automation/network-player-server/target/network-player-server-1.0-SNAPSHOT.jar \
-   "$PLAYER_SERVER_DIR/app.jar"
-
-cat > "$PLAYER_SERVER_DIR/Dockerfile" <<'EOF'
-FROM eclipse-temurin:24-jre-alpine
-WORKDIR /app
-COPY app.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
-EOF
-
-docker build -t "$ACR_SERVER/atg-player-server:latest" "$PLAYER_SERVER_DIR"
+docker build -t "$ACR_SERVER/atg-player-server:latest" .
 docker push "$ACR_SERVER/atg-player-server:latest"
-
-rm -rf "$PLAYER_SERVER_DIR"
 ```
 
 ### 4b. Create the Container App
@@ -136,10 +123,14 @@ PLAYER_FQDN=$(az containerapp show \
 
 echo "Player server URL: https://$PLAYER_FQDN"
 
-# Health check -- should return 200 (Spring Boot actuator or just no 404)
-curl -s -o /dev/null -w "%{http_code}" "https://$PLAYER_FQDN/decide" -X POST \
+# List available player types -- should return all 5
+curl -s "https://$PLAYER_FQDN/types"
+# Expect: ["big-money","tech-debt","attack","random","engine"]
+
+# Health check a specific type -- 400 means server is up and rejecting invalid input
+curl -s -o /dev/null -w "%{http_code}" "https://$PLAYER_FQDN/attack/decide" -X POST \
   -H "Content-Type: application/json" -d '{}'
-# Expect 400 (bad request is fine -- means the server is up and rejecting invalid input)
+# Expect 400
 ```
 
 ## 5. Deploy Tournament Runner
@@ -204,18 +195,18 @@ curl -s "https://$RUNNER_FQDN/api/tournaments"
 
 ### 6a. Create a test CSV with reference player URLs
 
-If you deployed the reference player server in step 4, use it. Otherwise, substitute any reachable player server URLs.
+If you deployed the reference player server in step 4, use different player type paths to pit strategies against each other:
 
 ```bash
 cat > /tmp/test-players.csv <<EOF
-RefPlayer-1,https://$PLAYER_FQDN
-RefPlayer-2,https://$PLAYER_FQDN
-RefPlayer-3,https://$PLAYER_FQDN
-RefPlayer-4,https://$PLAYER_FQDN
+BigMoney,https://$PLAYER_FQDN/big-money
+Attack,https://$PLAYER_FQDN/attack
+Engine,https://$PLAYER_FQDN/engine
+TechDebt,https://$PLAYER_FQDN/tech-debt
 EOF
 ```
 
-The tournament requires at least 4 players.
+The tournament requires at least 4 players. Each URL targets a different AI strategy on the same server.
 
 ### 6b. Generate tournament config JSON
 
