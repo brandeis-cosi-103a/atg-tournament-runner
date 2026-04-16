@@ -82,7 +82,7 @@ class DelayedPlayerWrapperTest {
     }
 
     @Test
-    void getObserver_delegatesToWrappedPlayer() {
+    void getObserver_wrapsDelegate() {
         Player delegate = mock(Player.class);
         GameObserver observer = mock(GameObserver.class);
         when(delegate.getObserver()).thenReturn(Optional.of(observer));
@@ -90,9 +90,18 @@ class DelayedPlayerWrapperTest {
         DelayedPlayerWrapper wrapper = new DelayedPlayerWrapper(delegate, 25, 100);
 
         Optional<GameObserver> result = wrapper.getObserver();
-        assertTrue(result.isPresent());
-        assertEquals(observer, result.get());
+        assertTrue(result.isPresent(), "Should return a wrapped observer");
         verify(delegate).getObserver();
+    }
+
+    @Test
+    void getObserver_emptyWhenDelegateHasNone() {
+        Player delegate = mock(Player.class);
+        when(delegate.getObserver()).thenReturn(Optional.empty());
+
+        DelayedPlayerWrapper wrapper = new DelayedPlayerWrapper(delegate, 25, 100);
+
+        assertTrue(wrapper.getObserver().isEmpty());
     }
 
     @Test

@@ -108,5 +108,21 @@ const BarChart = (function() {
     });
   }
 
-  return { init: init, update: update };
+  /**
+   * Mark bars for forfeited players with a visual indicator.
+   * @param {Array} forfeitedIds - player IDs that forfeited in the current event
+   */
+  function setForfeited(forfeitedIds) {
+    if (!initialized) return;
+    Object.keys(playerMap).forEach(function(id) {
+      var p = playerMap[id];
+      if (forfeitedIds.includes(id)) {
+        p.bar.classList.add('forfeited');
+      } else {
+        p.bar.classList.remove('forfeited');
+      }
+    });
+  }
+
+  return { init: init, update: update, setForfeited: setForfeited };
 })();

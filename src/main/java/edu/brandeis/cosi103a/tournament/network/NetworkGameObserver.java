@@ -10,10 +10,15 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 /**
- * GameObserver implementation that forwards all game events to a Network Player Server.
- * This allows the remote server to observe game events for the player.
+ * GameObserver implementation that forwards game events to a Network Player Server
+ * asynchronously. Events are sent in order per player via CompletableFuture chaining,
+ * but the calling thread is not blocked.
+ *
+ * <p>Call {@link #flush()} before asking the player to make a decision to ensure
+ * all queued events have been delivered.
  */
 class NetworkGameObserver implements GameObserver {
     private final String serverUrl;
@@ -21,14 +26,9 @@ class NetworkGameObserver implements GameObserver {
     private final HttpClientWrapper httpClient;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Constructor for NetworkGameObserver.
-     *
-     * @param serverUrl The base URL of the network player server
-     * @param playerUuid The UUID identifying this player session
-     * @param httpClient The HTTP client wrapper to use for requests
-     * @param objectMapper The Jackson ObjectMapper for JSON serialization
-     */
+    /** Chain of pending async sends — ensures per-player event ordering. */
+    private CompletableFuture<Void> eventChain = CompletableFuture.completedFuture(null);
+
     NetworkGameObserver(String serverUrl, String playerUuid, HttpClientWrapper httpClient, ObjectMapper objectMapper) {
         this.serverUrl = serverUrl;
         this.playerUuid = playerUuid;
@@ -38,29 +38,43 @@ class NetworkGameObserver implements GameObserver {
 
     @Override
     public void notifyEvent(GameState state, Event event) {
+        // Serialize on the calling thread (fast, no I/O)
+        String requestJson;
         try {
-            // Create request DTO
-            LogEventRequest request = new LogEventRequest(state, event, playerUuid);
-            String requestJson = objectMapper.writeValueAsString(request);
-
-            // Build HTTP request with timeout
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(serverUrl + "/log-event"))
-                    .header("Content-Type", "application/json")
-                    .timeout(Duration.ofSeconds(5))
-                    .POST(HttpRequest.BodyPublishers.ofString(requestJson))
-                    .build();
-
-            // Send request synchronously with backpressure — block until complete or timeout
-            HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
-                System.err.println("Warning: Failed to log event to server. Status: "
-                        + response.statusCode() + " - " + response.body());
-            }
-
+            requestJson = objectMapper.writeValueAsString(new LogEventRequest(state, event, playerUuid));
         } catch (Exception e) {
-            // Log the error but don't throw - observers should not break the game flow
-            System.err.println("Warning: Failed to serialize or send event: " + e.getMessage());
+            System.err.println("Warning: Failed to serialize event: " + e.getMessage());
+            return;
         }
+
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+                .uri(URI.create(serverUrl + "/log-event"))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(5))
+                .POST(HttpRequest.BodyPublishers.ofString(requestJson))
+                .build();
+
+        // Chain after previous send to preserve ordering; returns immediately
+        eventChain = eventChain.thenCompose(v ->
+                httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(response -> {
+                            if (response.statusCode() != 200) {
+                                System.err.println("Warning: Failed to log event. Status: "
+                                        + response.statusCode() + " - " + response.body());
+                            }
+                        })
+                        .exceptionally(e -> {
+                            System.err.println("Warning: Failed to send event: " + e.getMessage());
+                            return null;
+                        })
+        );
+    }
+
+    /**
+     * Blocks until all queued events have been delivered.
+     * Call this before asking the player for a decision.
+     */
+    void flush() {
+        eventChain.join();
     }
 }

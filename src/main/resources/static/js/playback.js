@@ -357,6 +357,9 @@
 
     var changedIds = ev.placements ? ev.placements.map(function(p) { return p.id; }) : null;
     BarChart.update(ev.ratings, changedIds);
+
+    // Show forfeit indicators on bars
+    BarChart.setForfeited(ev.forfeitedPlayers || []);
   }
 
   function setControlsEnabled(enabled) {
@@ -620,6 +623,15 @@
       return s;
     });
 
+    // Populate timing data from tape
+    if (tape.timingStats) {
+        result.forEach(function(s) {
+            if (tape.timingStats[s.id]) {
+                s.timing = tape.timingStats[s.id];
+            }
+        });
+    }
+
     // Sort by rating descending
     result.sort(function(a, b) { return b.rating - a.rating; });
 
@@ -780,6 +792,35 @@
         html += '<div class="no-data">No card data available</div>';
       }
       html += '</div>';
+
+      // Timing Budget section (only if timing data exists)
+      if (s.timing) {
+        html += '<div class="player-card-section">';
+        html += '<div class="section-title">Timing Budget</div>';
+        html += '<div class="timing-stats">';
+        html += '<div class="timing-row">';
+        html += '<span class="timing-label">Avg decision time</span>';
+        html += '<span class="timing-value">' + s.timing.avgDecisionTimeMs + 'ms</span>';
+        html += '</div>';
+        html += '<div class="timing-row">';
+        html += '<span class="timing-label">Max game time</span>';
+        html += '<span class="timing-value">' + (s.timing.maxGameDecisionTimeMs / 1000).toFixed(1) + 's</span>';
+        html += '</div>';
+        if (s.timing.totalTimeouts > 0) {
+          html += '<div class="timing-row">';
+          html += '<span class="timing-label">Per-call timeouts</span>';
+          html += '<span class="timing-value timing-warning">' + s.timing.totalTimeouts + '</span>';
+          html += '</div>';
+        }
+        if (s.timing.totalForfeits > 0) {
+          html += '<div class="timing-row">';
+          html += '<span class="timing-label">Games forfeited</span>';
+          html += '<span class="timing-value timing-danger">' + s.timing.totalForfeits + ' / ' + s.timing.gamesPlayed + '</span>';
+          html += '</div>';
+        }
+        html += '</div>';
+        html += '</div>';
+      }
 
       html += '</div>'; // end player-card
     });

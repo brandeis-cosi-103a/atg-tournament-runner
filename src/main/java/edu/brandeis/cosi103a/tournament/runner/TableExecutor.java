@@ -8,9 +8,13 @@ import edu.brandeis.cosi.atg.state.PlayerResult;
 import edu.brandeis.cosi103a.tournament.engine.EngineLoader;
 import edu.brandeis.cosi103a.tournament.network.NetworkPlayer;
 import edu.brandeis.cosi103a.tournament.player.DelayedPlayerWrapper;
+import edu.brandeis.cosi103a.tournament.player.TimedPlayerWrapper;
+import edu.brandeis.cosi103a.tournament.player.TimingStats;
 
 import java.lang.reflect.Constructor;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,16 +26,30 @@ public class TableExecutor {
 
     private final EngineLoader engineLoader;
     private final PlayerDiscoveryService discoveryService;
+    private final Duration perCallTimeout;
+    private final Duration gameBudget;
 
     /**
-     * Creates a TableExecutor with the given engine loader and discovery service.
+     * Creates a TableExecutor with no time budgets.
+     */
+    public TableExecutor(EngineLoader engineLoader, PlayerDiscoveryService discoveryService) {
+        this(engineLoader, discoveryService, null, null);
+    }
+
+    /**
+     * Creates a TableExecutor with per-call timeout and game budget.
      *
      * @param engineLoader     the loader for creating Engine instances
      * @param discoveryService the service for discovering classpath players (may be null)
+     * @param perCallTimeout   HTTP request timeout for network player decisions (null to disable)
+     * @param gameBudget       max cumulative decision time per game (null to disable)
      */
-    public TableExecutor(EngineLoader engineLoader, PlayerDiscoveryService discoveryService) {
+    public TableExecutor(EngineLoader engineLoader, PlayerDiscoveryService discoveryService,
+                         Duration perCallTimeout, Duration gameBudget) {
         this.engineLoader = engineLoader;
         this.discoveryService = discoveryService;
+        this.perCallTimeout = perCallTimeout;
+        this.gameBudget = gameBudget;
     }
 
     /**
@@ -52,7 +70,8 @@ public class TableExecutor {
         List<GameOutcome> outcomes = new ArrayList<>();
 
         for (int gameIndex = 0; gameIndex < gamesPerTable; gameIndex++) {
-            List<Player> players = createPlayers(playerConfigs, nameToId);
+            Map<String, TimedPlayerWrapper> timedWrappers = new HashMap<>();
+            List<Player> players = createPlayers(playerConfigs, nameToId, timedWrappers);
             try {
                 Engine engine = engineLoader.create(players, kingdomCards);
                 GameResult result = engine.play();
@@ -62,13 +81,18 @@ public class TableExecutor {
                     List<String> deckTypes = pr.endingDeck().stream()
                         .map(card -> card.type().name())
                         .toList();
-                    placements.add(new Placement(id, pr.score(), deckTypes));
+                    TimingStats stats = null;
+                    TimedPlayerWrapper tw = timedWrappers.get(id);
+                    if (tw != null) {
+                        stats = tw.getTimingStats();
+                    }
+                    placements.add(new Placement(id, pr.score(), deckTypes, stats));
                 }
                 outcomes.add(new GameOutcome(gameIndex, placements));
             } catch (Exception e) {
                 // Game timeout, engine error, or player violation: all players get score 0
                 List<Placement> placements = playerIds.stream()
-                    .map(id -> new Placement(id, 0))
+                    .map(id -> new Placement(id, 0, List.of(), null))
                     .toList();
                 outcomes.add(new GameOutcome(gameIndex, placements));
             }
@@ -77,12 +101,18 @@ public class TableExecutor {
         return new MatchResult(tableNumber, playerIds, outcomes);
     }
 
-    private List<Player> createPlayers(List<PlayerConfig> configs, Map<String, String> nameToId) {
+    private List<Player> createPlayers(List<PlayerConfig> configs, Map<String, String> nameToId,
+                                        Map<String, TimedPlayerWrapper> timedWrappers) {
         List<Player> players = new ArrayList<>();
         for (PlayerConfig config : configs) {
             Player player = createPlayer(config);
             if (config.delay()) {
                 player = new DelayedPlayerWrapper(player, 2, 5);
+            }
+            if (gameBudget != null) {
+                TimedPlayerWrapper timed = new TimedPlayerWrapper(player, gameBudget);
+                timedWrappers.put(config.id(), timed);
+                player = timed;
             }
             nameToId.put(player.getName(), config.id());
             players.add(player);
@@ -111,7 +141,7 @@ public class TableExecutor {
         }
 
         // Default: treat as network player URL
-        return new NetworkPlayer(config.name(), url);
+        return new NetworkPlayer(config.name(), url, perCallTimeout);
     }
 
     private Player createFromClassName(String className, String playerName) {

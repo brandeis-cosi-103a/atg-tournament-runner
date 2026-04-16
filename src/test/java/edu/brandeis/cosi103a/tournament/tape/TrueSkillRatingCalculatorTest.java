@@ -36,10 +36,10 @@ class TrueSkillRatingCalculatorTest {
 
         // Placements: p1 highest score, p4 lowest
         List<Placement> placements = List.of(
-                new Placement("p1", 40),
-                new Placement("p2", 30),
-                new Placement("p3", 20),
-                new Placement("p4", 10)
+                new Placement("p1", 40, List.of(), null),
+                new Placement("p2", 30, List.of(), null),
+                new Placement("p3", 20, List.of(), null),
+                new Placement("p4", 10, List.of(), null)
         );
 
         Map<String, Rating> result = TrueSkillRatingCalculator.update(ratings, placements, gameInfo);
@@ -61,10 +61,10 @@ class TrueSkillRatingCalculatorTest {
     void tiedPlayers_getSameRank() {
         // Tied players should get the same rank
         int[] ranks = TrueSkillRatingCalculator.computeRanks(List.of(
-                new Placement("a", 30),
-                new Placement("b", 30),
-                new Placement("c", 20),
-                new Placement("d", 10)
+                new Placement("a", 30, List.of(), null),
+                new Placement("b", 30, List.of(), null),
+                new Placement("c", 20, List.of(), null),
+                new Placement("d", 10, List.of(), null)
         ));
         assertEquals(4, ranks.length);
         assertEquals(1, ranks[0], "a should be rank 1");
@@ -77,9 +77,9 @@ class TrueSkillRatingCalculatorTest {
     void allTied_getSameRank() {
         // All tied players should get rank 1
         int[] ranks = TrueSkillRatingCalculator.computeRanks(List.of(
-                new Placement("a", 20),
-                new Placement("b", 20),
-                new Placement("c", 20)
+                new Placement("a", 20, List.of(), null),
+                new Placement("b", 20, List.of(), null),
+                new Placement("c", 20, List.of(), null)
         ));
         assertEquals(1, ranks[0], "a should be rank 1");
         assertEquals(1, ranks[1], "b should be rank 1");
@@ -90,9 +90,9 @@ class TrueSkillRatingCalculatorTest {
     void computeRanks_isDeterministic() {
         // Same input should always produce same output
         List<Placement> placements = List.of(
-                new Placement("alice", 30),
-                new Placement("bob", 30),
-                new Placement("carol", 20)
+                new Placement("alice", 30, List.of(), null),
+                new Placement("bob", 30, List.of(), null),
+                new Placement("carol", 20, List.of(), null)
         );
         int[] ranks1 = TrueSkillRatingCalculator.computeRanks(placements);
         int[] ranks2 = TrueSkillRatingCalculator.computeRanks(placements);
@@ -111,8 +111,8 @@ class TrueSkillRatingCalculatorTest {
         ratings.put("spectator", customRating);
 
         List<Placement> placements = List.of(
-                new Placement("p1", 20),
-                new Placement("p2", 10)
+                new Placement("p1", 20, List.of(), null),
+                new Placement("p2", 10, List.of(), null)
         );
 
         Map<String, Rating> result = TrueSkillRatingCalculator.update(ratings, placements, gameInfo);

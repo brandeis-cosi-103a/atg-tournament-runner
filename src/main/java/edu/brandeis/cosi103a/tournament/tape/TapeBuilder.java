@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.gesundkrank.jskills.GameInfo;
 import de.gesundkrank.jskills.Rating;
+import edu.brandeis.cosi103a.tournament.player.TimingStats;
 import edu.brandeis.cosi103a.tournament.runner.Placement;
 
 import java.io.IOException;
@@ -64,6 +65,9 @@ public final class TapeBuilder {
                 playerCardCounts.put(playerId, new HashMap<>());
             }
 
+            // Track per-player timing aggregates
+            Map<String, TimingAggregate> playerTimingAggregates = new HashMap<>();
+
             // Find and sort round files
             List<Path> roundFiles;
             try (Stream<Path> paths = Files.list(tournamentDir)) {
@@ -115,7 +119,23 @@ public final class TapeBuilder {
                                     }
                                 }
                             }
-                            placements.add(new Placement(playerId, score, deck));
+                            TimingStats timingStats = null;
+                            JsonNode timingNode = pl.get("timingStats");
+                            if (timingNode != null && !timingNode.isNull()) {
+                                timingStats = MAPPER.treeToValue(timingNode, TimingStats.class);
+                            }
+                            placements.add(new Placement(playerId, score, deck, timingStats));
+
+                            if (timingStats != null) {
+                                TimingAggregate agg = playerTimingAggregates.computeIfAbsent(playerId, k -> new TimingAggregate());
+                                agg.gamesPlayed++;
+                                if (timingStats.forfeited()) agg.totalForfeits++;
+                                agg.totalTimeouts += timingStats.timeoutCount();
+                                agg.totalDecisionTimeMs += timingStats.totalDecisionTimeMs();
+                                if (timingStats.totalDecisionTimeMs() > agg.maxGameDecisionTimeMs) {
+                                    agg.maxGameDecisionTimeMs = timingStats.totalDecisionTimeMs();
+                                }
+                            }
                         }
                         gamesByIndex.computeIfAbsent(gameIndex, k -> new ArrayList<>())
                                 .add(placements);
@@ -160,6 +180,17 @@ public final class TapeBuilder {
                             placementsArray.add(pn);
                         }
                         event.set("placements", placementsArray);
+
+                        // Add forfeit info
+                        ArrayNode forfeitedArray = MAPPER.createArrayNode();
+                        for (Placement p : placements) {
+                            if (p.timingStats() != null && p.timingStats().forfeited()) {
+                                forfeitedArray.add(p.playerId());
+                            }
+                        }
+                        if (forfeitedArray.size() > 0) {
+                            event.set("forfeitedPlayers", forfeitedArray);
+                        }
 
                         // Emit ratings: conservative (mu - 3*sigma) for display, plus raw mu/sigma for auditing
                         Map<String, Rating> ratings = tracker.getCurrentRatings();
@@ -222,6 +253,24 @@ public final class TapeBuilder {
             }
             tape.set("deckStats", deckStats);
 
+            // Add timing stats (only if any timing data was collected)
+            if (!playerTimingAggregates.isEmpty()) {
+                ObjectNode timingStatsNode = MAPPER.createObjectNode();
+                for (var entry : playerTimingAggregates.entrySet()) {
+                    String playerId = entry.getKey();
+                    TimingAggregate agg = entry.getValue();
+                    ObjectNode playerTiming = MAPPER.createObjectNode();
+                    playerTiming.put("totalForfeits", agg.totalForfeits);
+                    playerTiming.put("totalTimeouts", agg.totalTimeouts);
+                    playerTiming.put("avgDecisionTimeMs", agg.gamesPlayed > 0
+                        ? agg.totalDecisionTimeMs / agg.gamesPlayed : 0);
+                    playerTiming.put("maxGameDecisionTimeMs", agg.maxGameDecisionTimeMs);
+                    playerTiming.put("gamesPlayed", agg.gamesPlayed);
+                    timingStatsNode.set(playerId, playerTiming);
+                }
+                tape.set("timingStats", timingStatsNode);
+            }
+
             MAPPER.writeValue(tournamentDir.resolve("tape.json").toFile(), tape);
 
         } catch (IOException e) {
@@ -260,5 +309,13 @@ public final class TapeBuilder {
         } else {
             System.out.println("tape.json written to " + tournamentDir);
         }
+    }
+
+    private static class TimingAggregate {
+        int gamesPlayed = 0;
+        int totalForfeits = 0;
+        int totalTimeouts = 0;
+        long totalDecisionTimeMs = 0;
+        long maxGameDecisionTimeMs = 0;
     }
 }

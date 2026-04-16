@@ -48,10 +48,10 @@ class TrueSkillTrackerTest {
 
         // Play a 4-player game: p1 first, p2 second, p3 third, p4 fourth
         List<Placement> placements = List.of(
-            new Placement("p1", 40),
-            new Placement("p2", 30),
-            new Placement("p3", 20),
-            new Placement("p4", 10)
+            new Placement("p1", 40, List.of(), null),
+            new Placement("p2", 30, List.of(), null),
+            new Placement("p3", 20, List.of(), null),
+            new Placement("p4", 10, List.of(), null)
         );
         tracker.processGame(placements);
 
@@ -77,8 +77,8 @@ class TrueSkillTrackerTest {
 
         // Game 1: alice wins
         tracker.processGame(List.of(
-            new Placement("alice", 30),
-            new Placement("bob", 20)
+            new Placement("alice", 30, List.of(), null),
+            new Placement("bob", 20, List.of(), null)
         ));
 
         Map<String, Integer> pointsAfterGame1 = tracker.getCurrentPoints();
@@ -89,8 +89,8 @@ class TrueSkillTrackerTest {
 
         // Game 2: alice wins again
         tracker.processGame(List.of(
-            new Placement("alice", 35),
-            new Placement("bob", 15)
+            new Placement("alice", 35, List.of(), null),
+            new Placement("bob", 15, List.of(), null)
         ));
 
         Map<String, Integer> pointsAfterGame2 = tracker.getCurrentPoints();
@@ -111,9 +111,9 @@ class TrueSkillTrackerTest {
         );
 
         tracker.processGame(List.of(
-            new Placement("a", 30),
-            new Placement("b", 20),
-            new Placement("c", 10)
+            new Placement("a", 30, List.of(), null),
+            new Placement("b", 20, List.of(), null),
+            new Placement("c", 10, List.of(), null)
         ));
 
         Map<String, Integer> points = tracker.getCurrentPoints();
@@ -145,8 +145,8 @@ class TrueSkillTrackerTest {
 
         Map<String, Rating> ratings1 = tracker.getCurrentRatings();
         tracker.processGame(List.of(
-            new Placement("p1", 30),
-            new Placement("p2", 20)
+            new Placement("p1", 30, List.of(), null),
+            new Placement("p2", 20, List.of(), null)
         ));
         Map<String, Rating> ratings2 = tracker.getCurrentRatings();
 
@@ -166,8 +166,8 @@ class TrueSkillTrackerTest {
 
         Map<String, Integer> points1 = tracker.getCurrentPoints();
         tracker.processGame(List.of(
-            new Placement("p1", 30),
-            new Placement("p2", 20)
+            new Placement("p1", 30, List.of(), null),
+            new Placement("p2", 20, List.of(), null)
         ));
         Map<String, Integer> points2 = tracker.getCurrentPoints();
 

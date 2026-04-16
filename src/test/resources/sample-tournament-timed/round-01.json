@@ -1,0 +1,25 @@
+{
+  "roundNumber": 1,
+  "kingdomCards": ["REFACTOR", "HACK"],
+  "matches": [{
+    "tableNumber": 1,
+    "playerIds": ["p1", "p2", "p3", "p4"],
+    "outcomes": [{
+      "gameIndex": 0,
+      "placements": [
+        {"playerId": "p1", "score": 24, "deck": ["BITCOIN"], "timingStats": {"totalDecisionTimeMs": 500, "decisionCount": 40, "timeoutCount": 0, "forfeited": false, "decisionAtForfeit": null}},
+        {"playerId": "p2", "score": 20, "deck": ["BITCOIN"], "timingStats": {"totalDecisionTimeMs": 12000, "decisionCount": 35, "timeoutCount": 2, "forfeited": false, "decisionAtForfeit": null}},
+        {"playerId": "p3", "score": 18, "deck": ["BITCOIN"], "timingStats": {"totalDecisionTimeMs": 31000, "decisionCount": 25, "timeoutCount": 5, "forfeited": true, "decisionAtForfeit": 20}},
+        {"playerId": "p4", "score": 12, "deck": ["BITCOIN"], "timingStats": {"totalDecisionTimeMs": 300, "decisionCount": 42, "timeoutCount": 0, "forfeited": false, "decisionAtForfeit": null}}
+      ]
+    }, {
+      "gameIndex": 1,
+      "placements": [
+        {"playerId": "p4", "score": 30, "deck": ["BITCOIN"], "timingStats": {"totalDecisionTimeMs": 250, "decisionCount": 45, "timeoutCount": 0, "forfeited": false, "decisionAtForfeit": null}},
+        {"playerId": "p3", "score": 22, "deck": ["BITCOIN"], "timingStats": {"totalDecisionTimeMs": 28000, "decisionCount": 30, "timeoutCount": 3, "forfeited": true, "decisionAtForfeit": 22}},
+        {"playerId": "p2", "score": 15, "deck": ["BITCOIN"], "timingStats": {"totalDecisionTimeMs": 8000, "decisionCount": 38, "timeoutCount": 1, "forfeited": false, "decisionAtForfeit": null}},
+        {"playerId": "p1", "score": 10, "deck": ["BITCOIN"], "timingStats": {"totalDecisionTimeMs": 600, "decisionCount": 44, "timeoutCount": 0, "forfeited": false, "decisionAtForfeit": null}}
+      ]
+    }]
+  }]
+}

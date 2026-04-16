@@ -140,6 +140,56 @@ class TapeBuilderTest {
         assertTrue(Files.exists(tempDir.resolve("tape.json")));
     }
 
+    @Test
+    void buildTape_aggregatesTimingStats(@TempDir Path tempDir) throws Exception {
+        copyResource("sample-tournament-timed/tournament.json", tempDir.resolve("tournament.json"));
+        copyResource("sample-tournament-timed/round-01.json", tempDir.resolve("round-01.json"));
+
+        TapeBuilder.buildTape(tempDir, GAME_INFO);
+
+        var mapper = new ObjectMapper();
+        JsonNode tape = mapper.readTree(tempDir.resolve("tape.json").toFile());
+
+        // timingStats section should exist
+        assertTrue(tape.has("timingStats"), "tape should contain timingStats");
+        JsonNode timingStats = tape.get("timingStats");
+
+        // p3 forfeited in both games
+        JsonNode p3Timing = timingStats.get("p3");
+        assertNotNull(p3Timing, "p3 should have timing stats");
+        assertEquals(2, p3Timing.get("totalForfeits").asInt(), "p3 forfeited in both games");
+        assertEquals(8, p3Timing.get("totalTimeouts").asInt(), "p3 had 5+3 timeouts");
+        assertEquals(2, p3Timing.get("gamesPlayed").asInt());
+        assertEquals(31000, p3Timing.get("maxGameDecisionTimeMs").asLong());
+
+        // p1 had no forfeits or timeouts
+        JsonNode p1Timing = timingStats.get("p1");
+        assertNotNull(p1Timing);
+        assertEquals(0, p1Timing.get("totalForfeits").asInt());
+        assertEquals(0, p1Timing.get("totalTimeouts").asInt());
+        assertEquals(2, p1Timing.get("gamesPlayed").asInt());
+
+        // p2 had 3 total timeouts, 0 forfeits
+        JsonNode p2Timing = timingStats.get("p2");
+        assertNotNull(p2Timing);
+        assertEquals(0, p2Timing.get("totalForfeits").asInt());
+        assertEquals(3, p2Timing.get("totalTimeouts").asInt());
+
+        // Events should have forfeitedPlayers for games where p3 forfeited
+        JsonNode events = tape.get("events");
+        for (int i = 0; i < events.size(); i++) {
+            JsonNode event = events.get(i);
+            if (event.has("forfeitedPlayers")) {
+                JsonNode forfeited = event.get("forfeitedPlayers");
+                boolean containsP3 = false;
+                for (JsonNode f : forfeited) {
+                    if ("p3".equals(f.asText())) containsP3 = true;
+                }
+                assertTrue(containsP3, "forfeitedPlayers should include p3");
+            }
+        }
+    }
+
     private void copyResource(String resourceName, Path target) throws Exception {
         try (var in = getClass().getClassLoader().getResourceAsStream(resourceName)) {
             if (in == null) {

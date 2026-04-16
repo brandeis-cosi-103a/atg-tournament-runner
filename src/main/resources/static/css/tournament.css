@@ -1009,3 +1009,48 @@ h1 {
   font-style: italic;
 }
 
+/* Timing budget stats in player cards */
+.timing-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.timing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  padding: 0.2rem 0;
+}
+
+.timing-label {
+  color: #8899a6;
+}
+
+.timing-value {
+  font-weight: 500;
+  color: #e7e9ea;
+  font-variant-numeric: tabular-nums;
+}
+
+.timing-warning {
+  color: #f39c12;
+}
+
+.timing-danger {
+  color: #e74c3c;
+}
+
+/* Forfeited bar indicator */
+.bar.forfeited {
+  opacity: 0.5;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(231, 76, 60, 0.3) 4px,
+    rgba(231, 76, 60, 0.3) 8px
+  ) !important;
+}
+
