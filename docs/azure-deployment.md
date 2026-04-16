@@ -193,117 +193,63 @@ curl -s "https://$RUNNER_FQDN/api/tournaments"
 
 ## 6. Smoke Test with Small Tournament
 
-### 6a. Create a test CSV with reference player URLs
+### 6a. Open the web UI
 
-If you deployed the reference player server in step 4, use different player type paths to pit strategies against each other:
-
-```bash
-cat > /tmp/test-players.csv <<EOF
-BigMoney,https://$PLAYER_FQDN/big-money
-Attack,https://$PLAYER_FQDN/attack
-Engine,https://$PLAYER_FQDN/engine
-TechDebt,https://$PLAYER_FQDN/tech-debt
-EOF
-```
-
-The tournament requires at least 4 players. Each URL targets a different AI strategy on the same server.
-
-### 6b. Generate tournament config JSON
-
-```bash
-./scripts/make-tournament.sh \
-  --rounds 2 \
-  --games-per-player 5 \
-  --name "Smoke Test" \
-  /tmp/test-players.csv > /tmp/test-tournament.json
-```
-
-Inspect the generated config:
-
-```bash
-cat /tmp/test-tournament.json
-```
-
-### 6c. POST to the tournament runner API
-
-```bash
-curl -X POST "https://$RUNNER_FQDN/api/tournaments" \
-  -H "Content-Type: application/json" \
-  -d @/tmp/test-tournament.json
-```
-
-Expected response (HTTP 202):
-```json
-{
-  "tournamentId": "<uuid>",
-  "tournamentName": "Smoke Test",
-  "status": "ACCEPTED",
-  "players": [...]
-}
-```
-
-### 6d. Monitor progress
-
-Open the web UI in your browser:
+Open the tournament runner in your browser:
 ```
 https://$RUNNER_FQDN/
 ```
 
-Or poll the status API:
-```bash
-TOURNAMENT_ID=<uuid-from-previous-response>
-curl -s "https://$RUNNER_FQDN/api/tournaments/$TOURNAMENT_ID/status"
-```
+### 6b. Create a smoke test tournament
 
-The smoke test should complete within a minute or two. Once it finishes, verify results are visible in the web UI.
+1. Set tournament name to `smoke-test`, rounds to `2`, games/player to `5`
+2. Click **Paste CSV** and paste reference player URLs (one per line, `name,url`):
+   ```
+   BigMoney,https://<PLAYER_FQDN>/big-money
+   Attack,https://<PLAYER_FQDN>/attack
+   Engine,https://<PLAYER_FQDN>/engine
+   TechDebt,https://<PLAYER_FQDN>/tech-debt
+   ```
+   (Replace `<PLAYER_FQDN>` with the actual player server hostname from step 4c.)
+3. Click **Import** — the player table populates with all 4 entries
+4. Review the table, then click **Run Tournament**
+
+### 6c. Verify
+
+The UI redirects to the live playback page. The smoke test should complete within a minute or two. Verify results and rankings are visible.
 
 ## 7. Run Real Tournament
 
 ### 7a. Prepare student player CSV
 
-Export student Google Form responses to CSV. The CSV format is `name,url` with no header row:
+Export student Google Form responses to CSV. Clean it to `name,url` format (no header, no extra columns):
 
 ```
 Alice,https://alice-player.azurecontainerapps.io
 Bob,https://bob-player.eastus.azurecontainerapps.io
 Charlie,https://charlie-atg.azurewebsites.net
-...
 ```
 
-Save as `students.csv`. If the Google Form CSV has extra columns or a header, clean it up first.
+### 7b. Create the tournament via web UI
 
-### 7b. Generate tournament config
+1. Open `https://$RUNNER_FQDN/`
+2. Set tournament name (e.g. `cosi103a-2026-04-16`), rounds to `15`, games/player to `25`
+3. Click **Paste CSV**, paste the student CSV, click **Import**
+4. Review the populated player table — fix any typos, remove test entries, add reference players if desired
+5. Click **Run Tournament**
 
-For a class tournament with 22 students, recommended settings:
+Recommended settings: 15 rounds, 25 games/player gives enough data for meaningful TrueSkill rankings with 22 students.
 
-```bash
-./scripts/make-tournament.sh \
-  --rounds 15 \
-  --games-per-player 25 \
-  --name "COSI 103A Tournament $(date +%Y-%m-%d)" \
-  students.csv > tournament.json
-```
+### 7c. Monitor
 
-This produces ~15 rounds with each student playing ~25 games per round, giving enough data for meaningful TrueSkill rankings.
-
-### 7c. Start the tournament
-
-```bash
-curl -X POST "https://$RUNNER_FQDN/api/tournaments" \
-  -H "Content-Type: application/json" \
-  -d @tournament.json
-```
-
-### 7d. Monitor via web UI
-
-Open `https://$RUNNER_FQDN/` in your browser. The UI shows real-time progress via WebSocket, including:
+The UI shows real-time progress via WebSocket:
 - Round-by-round results
 - TrueSkill ratings
 - Per-player win/loss statistics
 
-A full tournament with 22 players, 15 rounds, and 25 games per player typically takes 5-15 minutes depending on student server response times.
+A full tournament with 22 players typically takes 5-15 minutes depending on student server response times.
 
-### 7e. Download results
+### 7d. Download results
 
 Once complete, download the tournament data ZIP from the web UI, or via the API:
 
