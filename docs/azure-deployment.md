@@ -167,10 +167,18 @@ az containerapp create \
   --min-replicas 1 \
   --max-replicas 1 \
   --cpu 2.0 \
-  --memory 4.0Gi
+  --memory 4.0Gi \
+  --env-vars \
+    "TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=10" \
+    "TOURNAMENT_GAME_BUDGET_SECONDS=120"
 ```
 
 The tournament runner needs more CPU/memory than the player server because it orchestrates all games concurrently (64-thread pool by default).
+
+**Time budget environment variables:**
+- `TOURNAMENT_PER_CALL_TIMEOUT_SECONDS` — Hard timeout (seconds) for each `/decide` HTTP request. If a player doesn't respond in time, that decision is forfeited (passive default). Recommended: `10`.
+- `TOURNAMENT_GAME_BUDGET_SECONDS` — Cumulative decision time (seconds) across all `/decide` calls in a single game. Once exceeded, the player makes passive defaults for the rest of that game. Recommended: `120`.
+- Both must be > 0 to enable time budgets. Set to `0` to disable.
 
 ### 5d. Verify
 
