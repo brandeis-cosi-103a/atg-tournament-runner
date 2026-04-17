@@ -107,18 +107,47 @@
     document.getElementById('info-kingdom').textContent = '-';
 
     // Connect to WebSocket
+    console.log('[live] connecting to /ws, tournamentId=' + tournamentId);
     const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
     stompClient.debug = null;
 
     stompClient.connect({}, function() {
+      console.log('[live] STOMP connected, subscribing to /topic/tournaments/' + tournamentId);
       stompClient.subscribe('/topic/tournaments/' + tournamentId, function(message) {
+        console.log('[live] received update:', message.body.substring(0, 200));
         handleLiveUpdate(JSON.parse(message.body));
       });
+      // Request current status (triggers @MessageMapping on server)
+      console.log('[live] requesting current status via /app/tournaments/' + tournamentId + '/subscribe');
+      stompClient.send('/app/tournaments/' + tournamentId + '/subscribe', {}, '{}');
     }, function(error) {
-      console.error('WebSocket error:', error);
+      console.error('[live] WebSocket error:', error);
       document.getElementById('info-game').textContent = 'Connection lost';
     });
+
+    // Poll REST API as fallback if no WebSocket update arrives
+    var liveReceived = false;
+    var origHandleLive = handleLiveUpdate;
+    handleLiveUpdate = function(status) {
+      liveReceived = true;
+      handleLiveUpdate = origHandleLive; // restore original
+      origHandleLive(status);
+    };
+    setTimeout(function() {
+      if (!liveReceived) {
+        console.log('[live] no WebSocket update after 3s, polling REST fallback');
+        fetch('/api/tournaments/' + encodeURIComponent(tournamentId) + '/status')
+          .then(function(res) { return res.ok ? res.json() : null; })
+          .then(function(status) {
+            if (status) {
+              console.log('[live] REST fallback got status:', status.state);
+              origHandleLive(status);
+            }
+          })
+          .catch(function(err) { console.error('[live] REST fallback failed:', err); });
+      }
+    }, 3000);
 
     // Initialize chart if we have players
     if (livePlayers.length > 0) {
