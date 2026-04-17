@@ -180,6 +180,10 @@
       document.getElementById('info-round').textContent = currentRound + ' / ' + totalRounds;
       document.getElementById('info-game').textContent = completedGames + ' / ' + totalGames;
       updateLiveTimeline(totalGames > 0 ? completedGames / totalGames : 0);
+      if (status.kingdomCards) {
+        var formattedCards = status.kingdomCards.map(formatCardName);
+        document.getElementById('info-kingdom').textContent = formattedCards.join(', ');
+      }
       if (ratings) {
         BarChart.update(ratings, null);
       }

@@ -30,6 +30,16 @@ public class NetworkPlayer implements Player {
     private final ObjectMapper objectMapper;
     private final NetworkGameObserver observer;
     private final Duration requestTimeout;
+    private volatile long lastHttpElapsedNanos = 0;
+
+    /**
+     * Returns the elapsed time of the most recent HTTP /decide call, in nanoseconds.
+     * This excludes serialization/deserialization overhead on the caller side,
+     * so it more fairly represents the player's actual response time.
+     */
+    public long getLastHttpElapsedNanos() {
+        return lastHttpElapsedNanos;
+    }
 
     /**
      * Constructor for NetworkPlayer.
@@ -82,7 +92,7 @@ public class NetworkPlayer implements Player {
         observer.flush();
 
         try {
-            // Create request DTO
+            // Create request DTO (serialization — not counted toward player budget)
             DecisionRequest request = new DecisionRequest(state, options, event, playerUuid);
             String requestJson = objectMapper.writeValueAsString(request);
 
@@ -96,14 +106,16 @@ public class NetworkPlayer implements Player {
             }
             HttpRequest httpRequest = requestBuilder.build();
 
-            // Send request and get response
+            // Send request and get response — only this is timed for budget purposes
+            long sendStart = System.nanoTime();
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            lastHttpElapsedNanos = System.nanoTime() - sendStart;
 
             if (response.statusCode() != 200) {
                 throw new RuntimeException("Server returned error: " + response.statusCode() + " - " + response.body());
             }
 
-            // Parse response
+            // Parse response (deserialization — not counted toward player budget)
             DecisionResponse decisionResponse = objectMapper.readValue(response.body(), DecisionResponse.class);
 
             // Return the decision from the response

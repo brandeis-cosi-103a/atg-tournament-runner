@@ -11,6 +11,7 @@ import edu.brandeis.cosi.atg.event.Event;
 import edu.brandeis.cosi.atg.event.GameObserver;
 import edu.brandeis.cosi.atg.player.Player;
 import edu.brandeis.cosi.atg.state.GameState;
+import edu.brandeis.cosi103a.tournament.network.NetworkPlayer;
 
 /**
  * A Player decorator that tracks cumulative decision time against a per-game
@@ -74,16 +75,32 @@ public class TimedPlayerWrapper implements Player {
         long startNanos = System.nanoTime();
         try {
             Decision result = delegate.makeDecision(state, options, event);
-            totalDecisionTimeMs += TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+            totalDecisionTimeMs += httpElapsedMs(startNanos);
             checkBudgetExceeded();
             return result;
         } catch (Exception e) {
             // Delegate failed (HTTP timeout, network error, player bug, etc.)
-            totalDecisionTimeMs += TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+            totalDecisionTimeMs += httpElapsedMs(startNanos);
             timeoutCount++;
             checkBudgetExceeded();
             return forfeitDecision(options);
         }
+    }
+
+    /**
+     * Returns the elapsed time to charge against the budget.
+     * If the delegate is a NetworkPlayer, uses the HTTP-only elapsed time
+     * (excluding serialization/deserialization on our side).
+     * Otherwise falls back to wall-clock time.
+     */
+    private long httpElapsedMs(long wallStartNanos) {
+        if (delegate instanceof NetworkPlayer np) {
+            long httpNanos = np.getLastHttpElapsedNanos();
+            if (httpNanos > 0) {
+                return TimeUnit.NANOSECONDS.toMillis(httpNanos);
+            }
+        }
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - wallStartNanos);
     }
 
     private void checkBudgetExceeded() {

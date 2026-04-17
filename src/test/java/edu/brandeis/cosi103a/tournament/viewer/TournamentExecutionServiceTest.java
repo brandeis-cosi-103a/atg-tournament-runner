@@ -175,8 +175,9 @@ class TournamentExecutionServiceTest {
         assertNull(running.excludedPlayers());
 
         TournamentStatus runningWithExcluded = TournamentStatus.running(
-            "id2b", 1, 5, 0, 100, null, List.of("DeadBot"));
+            "id2b", 1, 5, 0, 100, null, List.of("DeadBot"), null);
         assertEquals(List.of("DeadBot"), runningWithExcluded.excludedPlayers());
+        assertNull(runningWithExcluded.kingdomCards());
 
         TournamentStatus completed = TournamentStatus.completed("id3", 5, 100, null);
         assertEquals(TournamentStatus.State.COMPLETED, completed.state());

@@ -205,7 +205,7 @@ public class TournamentExecutionService {
             // Send initial status (include excluded players if any failed health check)
             List<String> excluded = failedHealthCheck.isEmpty() ? null : failedHealthCheck;
             TournamentStatus initialStatus = TournamentStatus.running(
-                tournamentId, 1, config.rounds(), completedGames, totalGames, null, excluded
+                tournamentId, 1, config.rounds(), completedGames, totalGames, null, excluded, null
             );
             runningTournaments.put(tournamentId, initialStatus);
             if (progressListener != null) {
@@ -304,8 +304,15 @@ public class TournamentExecutionService {
                     if (isLastGame || now - lastBroadcastTime >= 500) {
                         lastBroadcastTime = now;
                         Map<String, Double> currentRatings = buildRatingsMap(ratingsTracker);
+                        // Include kingdom cards for the current display round
+                        List<String> currentKingdomCards = null;
+                        List<Card.Type> kcTypes = roundKingdomCards.get(currentRoundForDisplay);
+                        if (kcTypes != null) {
+                            currentKingdomCards = kcTypes.stream().map(Card.Type::name).toList();
+                        }
                         TournamentStatus status = TournamentStatus.running(
-                            tournamentId, currentRoundForDisplay, config.rounds(), completedGames, totalGames, currentRatings
+                            tournamentId, currentRoundForDisplay, config.rounds(), completedGames, totalGames,
+                            currentRatings, null, currentKingdomCards
                         );
                         sendWebSocketUpdate(tournamentId, status);
                     }
