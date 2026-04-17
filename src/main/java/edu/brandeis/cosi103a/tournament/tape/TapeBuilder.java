@@ -132,6 +132,7 @@ public final class TapeBuilder {
                                 if (timingStats.forfeited()) agg.totalForfeits++;
                                 agg.totalTimeouts += timingStats.timeoutCount();
                                 agg.totalDecisionTimeMs += timingStats.totalDecisionTimeMs();
+                                agg.totalDecisionCount += timingStats.decisionCount();
                                 if (timingStats.totalDecisionTimeMs() > agg.maxGameDecisionTimeMs) {
                                     agg.maxGameDecisionTimeMs = timingStats.totalDecisionTimeMs();
                                 }
@@ -262,8 +263,10 @@ public final class TapeBuilder {
                     ObjectNode playerTiming = MAPPER.createObjectNode();
                     playerTiming.put("totalForfeits", agg.totalForfeits);
                     playerTiming.put("totalTimeouts", agg.totalTimeouts);
-                    playerTiming.put("avgDecisionTimeMs", agg.gamesPlayed > 0
+                    playerTiming.put("avgGameTimeMs", agg.gamesPlayed > 0
                         ? agg.totalDecisionTimeMs / agg.gamesPlayed : 0);
+                    playerTiming.put("avgCallTimeMs", agg.totalDecisionCount > 0
+                        ? agg.totalDecisionTimeMs / agg.totalDecisionCount : 0);
                     playerTiming.put("maxGameDecisionTimeMs", agg.maxGameDecisionTimeMs);
                     playerTiming.put("gamesPlayed", agg.gamesPlayed);
                     timingStatsNode.set(playerId, playerTiming);
@@ -316,6 +319,7 @@ public final class TapeBuilder {
         int totalForfeits = 0;
         int totalTimeouts = 0;
         long totalDecisionTimeMs = 0;
+        long totalDecisionCount = 0;
         long maxGameDecisionTimeMs = 0;
     }
 }

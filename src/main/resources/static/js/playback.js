@@ -799,11 +799,15 @@
         html += '<div class="section-title">Timing Budget</div>';
         html += '<div class="timing-stats">';
         html += '<div class="timing-row">';
-        html += '<span class="timing-label">Avg decision time</span>';
-        html += '<span class="timing-value">' + s.timing.avgDecisionTimeMs + 'ms</span>';
+        html += '<span class="timing-label">Avg budget used / game</span>';
+        html += '<span class="timing-value">' + (s.timing.avgGameTimeMs / 1000).toFixed(1) + 's</span>';
         html += '</div>';
         html += '<div class="timing-row">';
-        html += '<span class="timing-label">Max game time</span>';
+        html += '<span class="timing-label">Avg /decide call</span>';
+        html += '<span class="timing-value">' + s.timing.avgCallTimeMs + 'ms</span>';
+        html += '</div>';
+        html += '<div class="timing-row">';
+        html += '<span class="timing-label">Max budget used</span>';
         html += '<span class="timing-value">' + (s.timing.maxGameDecisionTimeMs / 1000).toFixed(1) + 's</span>';
         html += '</div>';
         if (s.timing.totalTimeouts > 0) {
