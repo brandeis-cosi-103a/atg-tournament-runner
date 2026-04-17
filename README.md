@@ -11,7 +11,7 @@ docker run --rm \
   -v $(pwd)/data:/app/data \
   -e TOURNAMENT_ENGINE_JAR=/app/engine.jar \
   -e TOURNAMENT_ENGINE_CLASS=edu.brandeis.cosi103a.engine.GameEngine \
-  -e TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=10 \
+  -e TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=5 \
   -e TOURNAMENT_GAME_BUDGET_SECONDS=30 \
   ghcr.io/brandeis-cosi-103a/atg-tournament-runner
 ```
@@ -73,7 +73,7 @@ docker run --rm \
   -v $(pwd)/data:/app/data \
   -e TOURNAMENT_ENGINE_JAR=/app/engine.jar \
   -e TOURNAMENT_ENGINE_CLASS=edu.brandeis.cosi103a.engine.GameEngine \
-  -e TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=10 \
+  -e TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=5 \
   -e TOURNAMENT_GAME_BUDGET_SECONDS=30 \
   -e CLASSPATH=/app/runner.jar:/app/player.jar \
   ghcr.io/brandeis-cosi-103a/atg-tournament-runner

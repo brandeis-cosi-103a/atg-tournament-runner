@@ -169,7 +169,7 @@ az containerapp create \
   --cpu 2.0 \
   --memory 4.0Gi \
   --env-vars \
-    "TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=10" \
+    "TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=5" \
     "TOURNAMENT_GAME_BUDGET_SECONDS=30"
 ```
 
