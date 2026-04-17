@@ -73,6 +73,8 @@ docker run --rm \
   -v $(pwd)/data:/app/data \
   -e TOURNAMENT_ENGINE_JAR=/app/engine.jar \
   -e TOURNAMENT_ENGINE_CLASS=com.example.MyEngine \
+  -e TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=10 \
+  -e TOURNAMENT_GAME_BUDGET_SECONDS=120 \
   ghcr.io/brandeis-cosi-103a/atg-tournament-runner
 ```
 
