@@ -11,6 +11,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
@@ -141,6 +145,33 @@ public class TournamentExecutionService {
         int totalGames = config.rounds() * gamesPerRound;
 
         try {
+            // Health check: probe network player URLs before starting
+            List<String> failedHealthCheck = healthCheckPlayers(config.players());
+            if (!failedHealthCheck.isEmpty()) {
+                System.out.println("Health check failed for: " + failedHealthCheck);
+                List<PlayerConfig> healthyPlayers = config.players().stream()
+                    .filter(p -> !failedHealthCheck.contains(p.name()))
+                    .toList();
+
+                if (healthyPlayers.size() < 4) {
+                    throw new RuntimeException(
+                        "Not enough healthy players to run tournament (need at least 4). " +
+                        "Failed health check: " + failedHealthCheck);
+                }
+
+                config = new TournamentConfig(config.name(), config.rounds(),
+                    config.gamesPerPlayer(), config.maxTurns(), healthyPlayers);
+
+                // Recalculate game counts with filtered player list
+                playersCount = config.players().size();
+                gamesPerPlayer = config.gamesPerPlayer() > 0
+                    ? config.gamesPerPlayer()
+                    : RoundGenerator.recommendedGamesPerPlayer(playersCount);
+                gamesPerPlayer = RoundGenerator.adjustGamesPerPlayer(playersCount, gamesPerPlayer);
+                gamesPerRound = (playersCount * gamesPerPlayer) / 4;
+                totalGames = config.rounds() * gamesPerRound;
+            }
+
             // Initialize file writer and write metadata
             RoundFileWriter writer = new RoundFileWriter(outputDir);
             writer.writeTournamentMetadata(config);
@@ -171,15 +202,19 @@ public class TournamentExecutionService {
                 }
             }
 
-            // Send initial status
+            // Send initial status (include excluded players if any failed health check)
+            List<String> excluded = failedHealthCheck.isEmpty() ? null : failedHealthCheck;
             TournamentStatus initialStatus = TournamentStatus.running(
-                tournamentId, 1, config.rounds(), completedGames, totalGames, null
+                tournamentId, 1, config.rounds(), completedGames, totalGames, null, excluded
             );
             runningTournaments.put(tournamentId, initialStatus);
             if (progressListener != null) {
                 progressListener.onProgress(initialStatus);
             }
             sendWebSocketUpdate(tournamentId, initialStatus);
+
+            // Capture final reference for use in lambdas (config may have been reassigned by health check)
+            final TournamentConfig finalConfig = config;
 
             // Submit ALL games from ALL rounds upfront
             CompletionService<GameResultWithMeta> completionService =
@@ -191,7 +226,7 @@ public class TournamentExecutionService {
             int staggerDelayMs = 50; // ms between submissions for first batch
 
             int submittedGames = 0;
-            for (int round = 1; round <= config.rounds(); round++) {
+            for (int round = 1; round <= finalConfig.rounds(); round++) {
                 if (skippedRounds.contains(round)) continue;
 
                 List<Card.Type> kingdomCards = roundKingdomCards.get(round);
@@ -210,7 +245,7 @@ public class TournamentExecutionService {
 
                     completionService.submit(() -> {
                         MatchResult result = tableExecutor.executeTable(gameNum, gamePlayers, kc,
-                            1, config.maxTurns());
+                            1, finalConfig.maxTurns());
                         return new GameResultWithMeta(roundNum, result, kcNames);
                     });
                     submittedGames++;
@@ -366,6 +401,50 @@ public class TournamentExecutionService {
                 Duration.ofSeconds(perCallTimeoutSeconds), Duration.ofSeconds(gameBudgetSeconds));
         }
         return new TableExecutor(engineLoader, playerDiscoveryService);
+    }
+
+    /**
+     * Probes each network player URL to verify the server is reachable.
+     * Sends a POST to /decide with an empty JSON body — any HTTP response (even 400)
+     * means the server is up. Connection refused or timeout means it's down.
+     *
+     * @param players the player configurations to check
+     * @return names of players that failed the health check
+     */
+    List<String> healthCheckPlayers(List<PlayerConfig> players) {
+        List<String> failed = new ArrayList<>();
+        HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
+
+        // Launch all probes in parallel
+        Map<String, CompletableFuture<Boolean>> probes = new LinkedHashMap<>();
+        for (PlayerConfig player : players) {
+            if (player.url().startsWith("classpath:")) continue;
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(player.url() + "/decide"))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(5))
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                .build();
+
+            probes.put(player.name(), httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> true)
+                .exceptionally(e -> false));
+        }
+
+        for (var entry : probes.entrySet()) {
+            try {
+                if (!entry.getValue().get(10, TimeUnit.SECONDS)) {
+                    failed.add(entry.getKey());
+                }
+            } catch (Exception e) {
+                failed.add(entry.getKey());
+            }
+        }
+
+        return failed;
     }
 
     /**

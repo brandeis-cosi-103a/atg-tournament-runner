@@ -41,9 +41,20 @@ Example game outcome:
 
 To determine winners: sort by score descending. Ties are possible.
 
+### Health Check
+
+Before the tournament begins, every network player URL is probed with a POST to `/decide`. If a player's server is unreachable or times out, that player is excluded from the tournament entirely. Excluded players are reported in the initial tournament status. If fewer than 4 healthy players remain, the tournament fails to start.
+
+### Time Budgets
+
+When time budgets are enabled (`tournament.per-call-timeout-seconds` and `tournament.game-budget-seconds` both > 0):
+
+- **Per-call timeout**: Each `/decide` HTTP request has a hard timeout. If the player's server doesn't respond in time, that single decision is forfeited (a passive default decision is made instead).
+- **Per-game budget**: Cumulative decision time is tracked across all `/decide` calls in a game. If the budget is exceeded, the player makes passive default decisions for the remainder of that game. The player retains their actual VP score — they are not forced to last place.
+
 ### Error Handling
 
-If a game fails (engine error, player violation, timeout), all players in that game receive a score of 0 for that game.
+Individual player timeouts and exceptions are handled gracefully — only the affected player's decision is forfeited, and the game continues normally. If the game engine itself crashes (not a player issue), all players in that game receive a score of 0.
 
 ## Prerequisites
 
@@ -191,7 +202,9 @@ If a tournament is interrupted, re-running with the same tournament name will sk
 
 ### Timeouts
 
-- Network players have a 5-second timeout for event logging
+- Per-call and game budget timeouts are configured via `tournament.per-call-timeout-seconds` and `tournament.game-budget-seconds` (both must be > 0 to enable)
+- Event logging (`/log-event`) has a separate 5-second timeout that does not count toward the game budget
+- If a player is forfeiting every decision, check that their server responds within the per-call timeout
 - If games are timing out, check your engine's turn limit handling
 
 ### Engine class not found
