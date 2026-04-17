@@ -47,10 +47,14 @@ Before the tournament begins, every network player URL is probed with a POST to 
 
 ### Time Budgets
 
-When time budgets are enabled (`tournament.per-call-timeout-seconds` and `tournament.game-budget-seconds` both > 0):
+Time budgets are configured via two environment variables (both must be > 0 to enable):
 
-- **Per-call timeout**: Each `/decide` HTTP request has a hard timeout. If the player's server doesn't respond in time, that single decision is forfeited (a passive default decision is made instead).
-- **Per-game budget**: Cumulative decision time is tracked across all `/decide` calls in a game. If the budget is exceeded, the player makes passive default decisions for the remainder of that game. The player retains their actual VP score — they are not forced to last place.
+| Environment Variable | Description | Recommended |
+|---|---|---|
+| `TOURNAMENT_PER_CALL_TIMEOUT_SECONDS` | Hard timeout for each `/decide` HTTP request. If the player's server doesn't respond in time, that single decision is forfeited (a passive default decision is made instead). | `10` |
+| `TOURNAMENT_GAME_BUDGET_SECONDS` | Maximum cumulative decision time per player across all `/decide` calls in a single game. If exceeded, the player makes passive default decisions for the remainder of that game. The player retains their actual VP score — they are not forced to last place. | `30` |
+
+These correspond to Spring Boot properties `tournament.per-call-timeout-seconds` and `tournament.game-budget-seconds`.
 
 ### Error Handling
 
