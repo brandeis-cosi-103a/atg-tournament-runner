@@ -65,6 +65,16 @@ public record TournamentStatus(
     }
 
     /**
+     * Creates a completed status that also reports excluded players from health checks.
+     */
+    public static TournamentStatus completed(String id, int totalRounds, int totalGames,
+                                             Map<String, Double> ratings,
+                                             List<String> excludedPlayers) {
+        return new TournamentStatus(id, State.COMPLETED, totalRounds, totalRounds,
+            totalGames, totalGames, ratings, null, excludedPlayers);
+    }
+
+    /**
      * Creates a new tournament status in FAILED state.
      */
     public static TournamentStatus failed(String id, int currentRound, int totalRounds,

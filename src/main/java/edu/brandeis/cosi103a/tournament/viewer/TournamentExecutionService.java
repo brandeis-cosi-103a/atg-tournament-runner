@@ -324,7 +324,7 @@ public class TournamentExecutionService {
             // Mark as completed with final ratings
             Map<String, Double> finalRatings = buildRatingsMap(ratingsTracker);
             TournamentStatus completedStatus = TournamentStatus.completed(
-                tournamentId, config.rounds(), totalGames, finalRatings
+                tournamentId, config.rounds(), totalGames, finalRatings, excluded
             );
             runningTournaments.put(tournamentId, completedStatus);
             if (progressListener != null) {
