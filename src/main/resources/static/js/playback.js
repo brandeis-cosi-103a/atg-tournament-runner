@@ -30,6 +30,7 @@
   let liveEvents = [];
   let livePlayers = [];
   let stompClient = null;
+  let pollTimer = null;
   let initialRating = 0;
 
   // Speed buttons
@@ -126,28 +127,22 @@
       document.getElementById('info-game').textContent = 'Connection lost';
     });
 
-    // Poll REST API as fallback if no WebSocket update arrives
-    var liveReceived = false;
-    var origHandleLive = handleLiveUpdate;
-    handleLiveUpdate = function(status) {
-      liveReceived = true;
-      handleLiveUpdate = origHandleLive; // restore original
-      origHandleLive(status);
-    };
-    setTimeout(function() {
-      if (!liveReceived) {
-        console.log('[live] no WebSocket update after 3s, polling REST fallback');
-        fetch('/api/tournaments/' + encodeURIComponent(tournamentId) + '/status')
-          .then(function(res) { return res.ok ? res.json() : null; })
-          .then(function(status) {
-            if (status) {
-              console.log('[live] REST fallback got status:', status.state);
-              origHandleLive(status);
+    // Poll REST API as reliable fallback alongside WebSocket.
+    // SockJS on Azure often falls back to XHR-polling which is laggy/jerky.
+    // This gives us smooth updates regardless of transport.
+    pollTimer = setInterval(function() {
+      fetch('/api/tournaments/' + encodeURIComponent(tournamentId) + '/status')
+        .then(function(res) { return res.ok ? res.json() : null; })
+        .then(function(status) {
+          if (status) {
+            handleLiveUpdate(status);
+            if (status.state === 'COMPLETED' || status.state === 'FAILED') {
+              clearInterval(pollTimer);
             }
-          })
-          .catch(function(err) { console.error('[live] REST fallback failed:', err); });
-      }
-    }, 3000);
+          }
+        })
+        .catch(function(err) { console.error('[live] poll failed:', err); });
+    }, 1000);
 
     // Initialize chart if we have players
     if (livePlayers.length > 0) {
@@ -195,12 +190,14 @@
       if (ratings) {
         BarChart.update(ratings, null);
       }
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       if (stompClient) {
         stompClient.disconnect();
       }
       // Transition to replay mode
       transitionToReplayMode();
     } else if (state === 'FAILED') {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       document.getElementById('info-game').textContent = 'Failed: ' + (status.error || 'Unknown error');
       if (stompClient) {
         stompClient.disconnect();
