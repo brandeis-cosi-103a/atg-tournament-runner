@@ -88,9 +88,18 @@ public class TableExecutor {
                     }
                     placements.add(new Placement(id, pr.score(), deckTypes, stats));
                 }
+                // Log scores for diagnostics
+                StringBuilder scores = new StringBuilder();
+                scores.append("Table ").append(tableNumber).append(" game ").append(gameIndex).append(" scores:");
+                for (Placement p : placements) {
+                    scores.append(" ").append(p.playerId()).append("=").append(p.score());
+                }
+                System.out.println(scores);
                 outcomes.add(new GameOutcome(gameIndex, placements));
             } catch (Exception e) {
                 // Game timeout, engine error, or player violation: all players get score 0
+                System.err.println("Game " + gameIndex + " failed: " + e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace(System.err);
                 List<Placement> placements = playerIds.stream()
                     .map(id -> new Placement(id, 0, List.of(), null))
                     .toList();
