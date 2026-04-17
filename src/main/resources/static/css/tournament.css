@@ -199,6 +199,11 @@ h1 {
   color: #fff;
 }
 
+.info-overlay #info-game {
+  font-variant-numeric: tabular-nums;
+  min-width: 7.5em;
+}
+
 /* Bar chart area */
 .chart-area {
   position: relative;

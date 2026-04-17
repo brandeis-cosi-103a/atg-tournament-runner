@@ -166,11 +166,17 @@ class TournamentExecutionServiceTest {
         assertEquals(0, queued.completedGames());
         assertEquals(100, queued.totalGames());
         assertNull(queued.error());
+        assertNull(queued.excludedPlayers());
 
         TournamentStatus running = TournamentStatus.running("id2", 3, 5, 50, 100, null);
         assertEquals(TournamentStatus.State.RUNNING, running.state());
         assertEquals(3, running.currentRound());
         assertEquals(50, running.completedGames());
+        assertNull(running.excludedPlayers());
+
+        TournamentStatus runningWithExcluded = TournamentStatus.running(
+            "id2b", 1, 5, 0, 100, null, List.of("DeadBot"));
+        assertEquals(List.of("DeadBot"), runningWithExcluded.excludedPlayers());
 
         TournamentStatus completed = TournamentStatus.completed("id3", 5, 100, null);
         assertEquals(TournamentStatus.State.COMPLETED, completed.state());
@@ -181,5 +187,43 @@ class TournamentExecutionServiceTest {
         assertEquals(TournamentStatus.State.FAILED, failed.state());
         assertNotNull(failed.error());
         assertEquals("Error occurred", failed.error());
+    }
+
+    @Test
+    void testHealthCheckSkipsClasspathPlayers(@TempDir Path tempDir) {
+        SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
+        TournamentExecutionService service = new TournamentExecutionService(
+            tempDir.toString(), 64, 0, 0, mockMessagingTemplate, new PlayerDiscoveryService());
+
+        try {
+            List<PlayerConfig> players = List.of(
+                new PlayerConfig("p1", "Bot1", "classpath:edu.brandeis.cosi103a.tournament.player.NaiveBigMoneyPlayer", false),
+                new PlayerConfig("p2", "Bot2", "classpath:edu.brandeis.cosi103a.tournament.player.RandomPlayer", false)
+            );
+
+            // Classpath players should not be probed — no failures
+            List<String> failed = service.healthCheckPlayers(players);
+            assertTrue(failed.isEmpty(), "Classpath players should pass health check without probing");
+        } finally {
+            service.shutdown();
+        }
+    }
+
+    @Test
+    void testHealthCheckDetectsUnreachablePlayers(@TempDir Path tempDir) {
+        SimpMessagingTemplate mockMessagingTemplate = mock(SimpMessagingTemplate.class);
+        TournamentExecutionService service = new TournamentExecutionService(
+            tempDir.toString(), 64, 0, 0, mockMessagingTemplate, new PlayerDiscoveryService());
+
+        try {
+            List<PlayerConfig> players = List.of(
+                new PlayerConfig("p1", "DeadBot", "http://localhost:19999", false)
+            );
+
+            List<String> failed = service.healthCheckPlayers(players);
+            assertEquals(List.of("DeadBot"), failed, "Unreachable player should fail health check");
+        } finally {
+            service.shutdown();
+        }
     }
 }
