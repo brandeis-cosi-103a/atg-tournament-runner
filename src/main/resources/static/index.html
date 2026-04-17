@@ -150,6 +150,31 @@
       margin-top: 0.5rem;
       font-size: 0.85rem;
     }
+
+    .player-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .csv-panel-inner {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #0f1419;
+      border: 1px solid #2f3640;
+      border-radius: 3px;
+    }
+    .csv-textarea {
+      width: 100%;
+      resize: vertical;
+      font-family: monospace;
+      font-size: 0.8rem;
+      box-sizing: border-box;
+    }
+    .csv-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.4rem;
+    }
   </style>
 </head>
 <body>
@@ -198,7 +223,23 @@
             <tbody id="players-tbody"></tbody>
           </table>
 
-          <button type="button" id="add-player-btn" class="btn add-row">+ Add Player</button>
+          <div class="player-actions">
+            <button type="button" id="add-player-btn" class="btn add-row">+ Add Player</button>
+            <button type="button" id="paste-csv-btn" class="btn add-row">Paste CSV</button>
+          </div>
+
+          <div id="csv-panel" style="display: none;">
+            <div class="csv-panel-inner">
+              <textarea id="csv-input" class="form-input csv-textarea"
+                        placeholder="name,url (one player per line)&#10;Alice,http://alice.example.com&#10;Bob,http://bob.example.com"
+                        rows="6"></textarea>
+              <div class="csv-actions">
+                <button type="button" id="csv-import-btn" class="btn btn-primary btn-sm">Import</button>
+                <button type="button" id="csv-cancel-btn" class="btn btn-sm">Cancel</button>
+                <span class="help-text">CSV: name,url — one player per line, no header</span>
+              </div>
+            </div>
+          </div>
         </div>
       </form>
 

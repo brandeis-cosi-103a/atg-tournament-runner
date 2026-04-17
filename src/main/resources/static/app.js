@@ -55,6 +55,23 @@
     for (let i = 0; i < 4; i++) addPlayer();
     addPlayerBtn.addEventListener('click', addPlayer);
     form.addEventListener('submit', handleSubmit);
+
+    // CSV paste UI
+    const pasteCsvBtn = document.getElementById('paste-csv-btn');
+    const csvPanel = document.getElementById('csv-panel');
+    const csvInput = document.getElementById('csv-input');
+    const csvImportBtn = document.getElementById('csv-import-btn');
+    const csvCancelBtn = document.getElementById('csv-cancel-btn');
+
+    pasteCsvBtn.addEventListener('click', () => {
+      csvPanel.style.display = csvPanel.style.display === 'none' ? 'block' : 'none';
+      if (csvPanel.style.display === 'block') csvInput.focus();
+    });
+    csvCancelBtn.addEventListener('click', () => {
+      csvPanel.style.display = 'none';
+      csvInput.value = '';
+    });
+    csvImportBtn.addEventListener('click', () => importCsv(csvInput.value));
   }
 
   // Add a player row
@@ -210,6 +227,69 @@
       submitBtn.disabled = false;
       submitBtn.textContent = 'Run Tournament';
     }
+  }
+
+  // Import players from CSV text (name,url per line)
+  function importCsv(text) {
+    const lines = text.split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    if (lines.length === 0) {
+      showError('CSV is empty');
+      return;
+    }
+
+    // Parse lines — skip header if it looks like one
+    const firstLine = lines[0].toLowerCase();
+    const startIdx = (firstLine === 'name,url' || firstLine === 'name, url') ? 1 : 0;
+
+    const entries = [];
+    for (let i = startIdx; i < lines.length; i++) {
+      const comma = lines[i].indexOf(',');
+      if (comma === -1) {
+        showError(`Line ${i + 1}: missing comma — expected "name,url"`);
+        return;
+      }
+      const name = lines[i].substring(0, comma).trim();
+      const url = lines[i].substring(comma + 1).trim();
+      if (!name) {
+        showError(`Line ${i + 1}: empty player name`);
+        return;
+      }
+      if (!url) {
+        showError(`Line ${i + 1}: empty URL for "${name}"`);
+        return;
+      }
+      entries.push({ name, url });
+    }
+
+    if (entries.length === 0) {
+      showError('No player entries found in CSV');
+      return;
+    }
+
+    // Clear existing rows
+    playersTbody.innerHTML = '';
+
+    // Add a row for each CSV entry
+    for (const entry of entries) {
+      addPlayer();
+      const row = playersTbody.lastElementChild;
+      const nameInput = row.querySelector('[data-field="name"]');
+      const typeSelect = row.querySelector('[data-field="type"]');
+      const urlInput = row.querySelector('[data-field="url"]');
+
+      nameInput.value = entry.name;
+      typeSelect.value = 'url';
+      typeSelect.dispatchEvent(new Event('change'));
+      urlInput.value = entry.url;
+    }
+
+    // Hide CSV panel and clear textarea
+    document.getElementById('csv-panel').style.display = 'none';
+    document.getElementById('csv-input').value = '';
+    errorMessage.style.display = 'none';
   }
 
   function showError(msg) {

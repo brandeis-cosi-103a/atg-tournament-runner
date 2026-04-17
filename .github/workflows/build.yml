@@ -37,6 +37,9 @@ jobs:
       - name: Run tests
         run: mvn test
 
+      - name: Create engine.jar placeholder for Docker build
+        run: touch engine.jar
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

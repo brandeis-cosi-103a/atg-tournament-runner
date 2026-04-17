@@ -1,0 +1,26 @@
+{
+  "name": "atg-tournament-runner",
+  "image": "mcr.microsoft.com/devcontainers/base:trixie",
+
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "24",
+      "installMaven": true
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    }
+  },
+
+  "forwardPorts": [8081],
+
+  "postCreateCommand": "mvn dependency:resolve -q || true",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic"
+      }
+    }
+  }
+}
