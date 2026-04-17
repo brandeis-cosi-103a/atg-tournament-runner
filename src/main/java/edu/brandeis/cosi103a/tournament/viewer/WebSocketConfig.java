@@ -5,6 +5,7 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
 /**
  * WebSocket configuration for tournament progress updates.
@@ -20,6 +21,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         config.enableSimpleBroker("/topic");
         // Set application destination prefix for messages bound for @MessageMapping methods
         config.setApplicationDestinationPrefixes("/app");
+    }
+
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registry) {
+        // Increase buffer limits to prevent session termination during rapid game updates
+        registry.setSendBufferSizeLimit(2 * 1024 * 1024); // 2MB
+        registry.setSendTimeLimit(30 * 1000); // 30s
     }
 
     @Override

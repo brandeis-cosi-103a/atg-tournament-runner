@@ -274,6 +274,7 @@ public class TournamentExecutionService {
 
             // Process results as they complete (in any order)
             int currentRoundForDisplay = skippedRounds.contains(1) ? 2 : 1;
+            long lastBroadcastTime = 0;
             try {
                 for (int i = 0; i < submittedGames; i++) {
                     GameResultWithMeta gameResult = completionService.take().get();
@@ -295,12 +296,19 @@ public class TournamentExecutionService {
                         currentRoundForDisplay = round;
                     }
 
-                    // Send WebSocket update
-                    Map<String, Double> currentRatings = buildRatingsMap(ratingsTracker);
-                    TournamentStatus status = TournamentStatus.running(
-                        tournamentId, currentRoundForDisplay, config.rounds(), completedGames, totalGames, currentRatings
-                    );
-                    sendWebSocketUpdate(tournamentId, status);
+                    // Throttle WebSocket broadcasts to ~1/second to avoid overwhelming
+                    // the STOMP broker buffer (which kills the session on overflow).
+                    // Always send the last game so the client sees 100% completion.
+                    long now = System.currentTimeMillis();
+                    boolean isLastGame = (i == submittedGames - 1);
+                    if (isLastGame || now - lastBroadcastTime >= 500) {
+                        lastBroadcastTime = now;
+                        Map<String, Double> currentRatings = buildRatingsMap(ratingsTracker);
+                        TournamentStatus status = TournamentStatus.running(
+                            tournamentId, currentRoundForDisplay, config.rounds(), completedGames, totalGames, currentRatings
+                        );
+                        sendWebSocketUpdate(tournamentId, status);
+                    }
 
                     // Write round file if round is complete
                     int expectedGames = roundGames.get(round).size();
