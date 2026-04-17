@@ -371,6 +371,8 @@ public class TournamentExecutionService {
             // Log error but don't fail tournament execution
             System.err.println("Failed to send WebSocket update for tournament " + tournamentId + ": " + e.getMessage());
         }
+        // Update stored status so REST polling returns current state
+        runningTournaments.put(tournamentId, status);
     }
 
     /**
