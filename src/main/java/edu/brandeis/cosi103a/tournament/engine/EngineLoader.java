@@ -47,7 +47,7 @@ public class EngineLoader {
 
     /**
      * Creates a new Engine instance with the given players and action card types.
-     * Tries the 2-arg constructor (List, List) first, falls back to 1-arg (List).
+     * Requires the engine to have a (List, List) constructor.
      *
      * @param players         list of players for the game
      * @param actionCardTypes list of action card types for the kingdom
@@ -55,13 +55,7 @@ public class EngineLoader {
      * @throws Exception if instantiation fails
      */
     public Engine create(List<Player> players, List<Card.Type> actionCardTypes) throws Exception {
-        try {
-            Constructor<?> ctor = engineClass.getConstructor(List.class, List.class);
-            return (Engine) ctor.newInstance(players, actionCardTypes);
-        } catch (NoSuchMethodException e) {
-            // Fall back to 1-arg constructor
-            Constructor<?> ctor = engineClass.getConstructor(List.class);
-            return (Engine) ctor.newInstance(players);
-        }
+        Constructor<?> ctor = engineClass.getConstructor(List.class, List.class);
+        return (Engine) ctor.newInstance(players, actionCardTypes);
     }
 }
