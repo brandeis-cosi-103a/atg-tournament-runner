@@ -36,6 +36,14 @@ public class EngineLoader {
         if (!Engine.class.isAssignableFrom(engineClass)) {
             throw new IllegalArgumentException(className + " does not implement Engine");
         }
+        // Verify the required (List, List) constructor exists at load time
+        try {
+            engineClass.getConstructor(List.class, List.class);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException(
+                className + " is missing the required constructor (List<Player>, List<Card.Type>). "
+                + "The engine must accept kingdom card selection.", e);
+        }
     }
 
     /**

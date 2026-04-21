@@ -73,7 +73,17 @@ public class TableExecutor {
             Map<String, TimedPlayerWrapper> timedWrappers = new HashMap<>();
             List<Player> players = createPlayers(playerConfigs, nameToId, timedWrappers);
             try {
-                Engine engine = engineLoader.create(players, kingdomCards);
+                Engine engine;
+                try {
+                    engine = engineLoader.create(players, kingdomCards);
+                } catch (Exception e) {
+                    // Engine creation failure is fatal — won't fix itself on retry
+                    String msg = "FATAL: Failed to create engine instance for table " + tableNumber
+                        + " game " + gameIndex + ". This is likely a missing constructor or incompatible engine JAR.";
+                    System.err.println(msg);
+                    e.printStackTrace(System.err);
+                    throw new RuntimeException(msg, e);
+                }
                 GameResult result = engine.play();
                 List<Placement> placements = new ArrayList<>();
                 for (PlayerResult pr : result.playerResults()) {
@@ -96,8 +106,11 @@ public class TableExecutor {
                 }
                 System.out.println(scores);
                 outcomes.add(new GameOutcome(gameIndex, placements));
+            } catch (RuntimeException e) {
+                // RuntimeExceptions (including engine creation failures) propagate up
+                throw e;
             } catch (Exception e) {
-                // Game timeout, engine error, or player violation: all players get score 0
+                // Game-level failure (player violation, timeout, etc): zero-score this game
                 System.err.println("Game " + gameIndex + " failed: " + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace(System.err);
                 List<Placement> placements = playerIds.stream()
