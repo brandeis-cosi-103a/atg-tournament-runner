@@ -4,16 +4,23 @@ Run practice tournaments for ATG (Automation: The Game) against built-in bots an
 
 ## Quick Start
 
+Build the Docker image:
+
+```bash
+mvn clean package -DskipTests
+cp /path/to/your/engine.jar engine.jar
+docker build -t atg-tournament-runner .
+```
+
+Run it:
+
 ```bash
 docker run --rm \
   -p 8081:8081 \
-  -v $(pwd)/engine.jar:/app/engine.jar \
   -v $(pwd)/data:/app/data \
-  -e TOURNAMENT_ENGINE_JAR=/app/engine.jar \
-  -e TOURNAMENT_ENGINE_CLASS=edu.brandeis.cosi103a.engine.GameEngine \
   -e TOURNAMENT_PER_CALL_TIMEOUT_SECONDS=5 \
   -e TOURNAMENT_GAME_BUDGET_SECONDS=30 \
-  ghcr.io/brandeis-cosi-103a/atg-tournament-runner
+  atg-tournament-runner
 ```
 
 Open **http://localhost:8081**, add your player URL and some bots, click **Run Tournament**.
