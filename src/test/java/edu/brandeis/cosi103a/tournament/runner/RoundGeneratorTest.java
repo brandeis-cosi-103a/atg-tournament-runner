@@ -165,6 +165,25 @@ class RoundGeneratorTest {
         testBalancedGamesConfiguration(8, 2); // 8 players, 2 games each = 4 total games
         testBalancedGamesConfiguration(12, 4); // 12 players, 4 games each = 12 total games
         testBalancedGamesConfiguration(6, 2); // 6 players, 2 games each = 3 total games
+        testBalancedGamesConfiguration(5, 4); // 5 players, 4 games each = 5 total games
+        testBalancedGamesConfiguration(7, 4); // 7 players, 4 games each = 7 total games
+    }
+
+    @Test
+    void generateBalancedGames_neverFailsForAllPlayerCounts() {
+        // The greedy algorithm must work reliably for all valid player counts.
+        // Run many iterations to catch non-deterministic failures (e.g., from
+        // an inconsistent comparator that only breaks on some random seeds).
+        for (int n = 4; n <= 12; n++) {
+            int gpp = RoundGenerator.recommendedGamesPerPlayer(n);
+            int adjusted = RoundGenerator.adjustGamesPerPlayer(n, gpp);
+            for (int trial = 0; trial < 50; trial++) {
+                List<PlayerConfig> players = createPlayers(n);
+                List<List<PlayerConfig>> games = RoundGenerator.generateBalancedGames(players, adjusted);
+                assertTrue(games.stream().allMatch(g -> g.size() == 4),
+                    "All games should have 4 players for n=" + n + " trial=" + trial);
+            }
+        }
     }
 
     private void testBalancedGamesConfiguration(int numPlayers, int gamesPerPlayer) {

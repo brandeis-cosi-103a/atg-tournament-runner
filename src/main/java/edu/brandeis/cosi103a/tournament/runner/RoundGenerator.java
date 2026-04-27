@@ -116,11 +116,11 @@ public final class RoundGenerator {
             throw new IllegalStateException("Not enough eligible players for a game. Algorithm bug.");
         }
 
-        // Sort by appearances (ascending) with random tiebreaker
-        eligible.sort((a, b) -> {
-            int cmp = Integer.compare(appearances.get(a), appearances.get(b));
-            return cmp != 0 ? cmp : random.nextInt(3) - 1;
-        });
+        // Shuffle for random tiebreaker, then stable-sort by appearances (ascending).
+        // Using a random comparator would violate the Comparator contract and cause
+        // TimSort to produce incorrect orderings, leading to unbalanced assignments.
+        Collections.shuffle(eligible, random);
+        eligible.sort(Comparator.comparingInt(appearances::get));
 
         // Greedily select 4 players, preferring those with fewer mutual pairings
         List<PlayerConfig> selected = new ArrayList<>();
