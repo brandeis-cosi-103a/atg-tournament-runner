@@ -27,3 +27,4 @@ results/
 dependency-reduced-pom.xml
 data/
 engine.jar
+*.local
