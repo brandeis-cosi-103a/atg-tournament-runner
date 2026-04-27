@@ -122,37 +122,31 @@ public final class RoundGenerator {
         Collections.shuffle(eligible, random);
         eligible.sort(Comparator.comparingInt(appearances::get));
 
-        // Greedily select 4 players, preferring those with fewer mutual pairings
+        // Select 4 players: always pick from the lowest appearance level first,
+        // using pairing diversity only as a tiebreaker within the same level.
+        // This guarantees balanced appearances and prevents early max-outs.
         List<PlayerConfig> selected = new ArrayList<>();
-        selected.add(eligible.get(0)); // Start with player who has fewest appearances
+        selected.add(eligible.remove(0)); // Start with player who has fewest appearances
 
-        // First pass: try to add players with no existing pairings
-        for (int i = 1; i < eligible.size() && selected.size() < 4; i++) {
-            PlayerConfig candidate = eligible.get(i);
+        while (selected.size() < 4) {
+            int minApps = appearances.get(eligible.get(0)); // lowest available
 
-            // Count how many selected players this candidate has already been paired with
-            int existingPairings = 0;
-            for (PlayerConfig s : selected) {
-                if (pairedWith.get(candidate).contains(s)) {
-                    existingPairings++;
+            // Among candidates at the minimum level, prefer one with fewest pairings
+            PlayerConfig best = null;
+            int bestPairings = Integer.MAX_VALUE;
+            for (PlayerConfig c : eligible) {
+                if (appearances.get(c) > minApps) break; // sorted, done with this level
+                int pairCount = 0;
+                for (PlayerConfig s : selected) {
+                    if (pairedWith.get(c).contains(s)) pairCount++;
+                }
+                if (pairCount < bestPairings) {
+                    bestPairings = pairCount;
+                    best = c;
                 }
             }
-
-            // Prefer candidates who haven't played with any selected players yet
-            if (existingPairings == 0) {
-                selected.add(candidate);
-            }
-        }
-
-        // Second pass: if we still need players, add anyone available
-        // (allows some pairing redundancy to ensure we can always fill games)
-        if (selected.size() < 4) {
-            for (int i = 1; i < eligible.size() && selected.size() < 4; i++) {
-                PlayerConfig candidate = eligible.get(i);
-                if (!selected.contains(candidate)) {
-                    selected.add(candidate);
-                }
-            }
+            selected.add(best);
+            eligible.remove(best);
         }
 
         // Shuffle selected players so seating order varies

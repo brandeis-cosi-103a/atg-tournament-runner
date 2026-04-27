@@ -177,7 +177,7 @@ class RoundGeneratorTest {
         for (int n = 4; n <= 12; n++) {
             int gpp = RoundGenerator.recommendedGamesPerPlayer(n);
             int adjusted = RoundGenerator.adjustGamesPerPlayer(n, gpp);
-            for (int trial = 0; trial < 50; trial++) {
+            for (int trial = 0; trial < 200; trial++) {
                 List<PlayerConfig> players = createPlayers(n);
                 List<List<PlayerConfig>> games = RoundGenerator.generateBalancedGames(players, adjusted);
                 assertTrue(games.stream().allMatch(g -> g.size() == 4),
