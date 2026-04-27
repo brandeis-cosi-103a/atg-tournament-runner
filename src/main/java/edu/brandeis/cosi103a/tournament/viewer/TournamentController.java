@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,14 +115,17 @@ public class TournamentController {
         }
 
         try {
-            // Convert DTOs to domain objects
-            List<PlayerConfig> playerConfigs = request.players().stream()
-                    .map(p -> new PlayerConfig(
-                            generatePlayerId(p.name()),
-                            p.name(),
-                            p.url(),
-                            p.delay()))
-                    .toList();
+            // Convert DTOs to domain objects, deduplicating ids so that multiple
+            // instances of the same player type are treated as distinct players.
+            Map<String, Integer> idCounts = new HashMap<>();
+            List<PlayerConfig> playerConfigs = new ArrayList<>();
+            for (var p : request.players()) {
+                String baseId = generatePlayerId(p.name());
+                int count = idCounts.merge(baseId, 1, Integer::sum);
+                String id = count == 1 ? baseId : baseId + "-" + count;
+                String name = count == 1 ? p.name() : p.name() + " " + count;
+                playerConfigs.add(new PlayerConfig(id, name, p.url(), p.delay()));
+            }
 
             TournamentConfig config = new TournamentConfig(
                     request.tournamentName(),
