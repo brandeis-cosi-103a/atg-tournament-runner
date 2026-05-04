@@ -192,12 +192,16 @@ public class TournamentExecutionService {
             Map<Integer, List<List<PlayerConfig>>> roundGames = new HashMap<>();
             Set<Integer> skippedRounds = new HashSet<>();
 
+            // Track kingdoms generated this session so no two rounds share one.
+            Set<Set<Card.Type>> usedKingdoms = new HashSet<>();
             for (int round = 1; round <= config.rounds(); round++) {
                 if (writer.roundExists(round)) {
                     skippedRounds.add(round);
                     completedGames += gamesPerRound;
                 } else {
-                    roundKingdomCards.put(round, RoundGenerator.selectKingdomCards());
+                    List<Card.Type> kingdom = RoundGenerator.selectUniqueKingdomCards(usedKingdoms);
+                    usedKingdoms.add(EnumSet.copyOf(kingdom));
+                    roundKingdomCards.put(round, kingdom);
                     roundGames.put(round, RoundGenerator.generateBalancedGames(config.players(), gamesPerPlayer));
                 }
             }

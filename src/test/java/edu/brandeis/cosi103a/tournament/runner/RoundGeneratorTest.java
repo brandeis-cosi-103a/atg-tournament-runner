@@ -25,6 +25,30 @@ class RoundGeneratorTest {
         }
     }
 
+    @Test
+    void selectUniqueKingdomCards_neverReturnsAPreviouslyUsedKingdom() {
+        // Generate 30 kingdoms back-to-back; verify all are unique.
+        // C(15,10)=3003 possible kingdoms, so this is well within feasibility.
+        Set<Set<Card.Type>> used = new HashSet<>();
+        for (int i = 0; i < 30; i++) {
+            List<Card.Type> kingdom = RoundGenerator.selectUniqueKingdomCards(used);
+            Set<Card.Type> asSet = EnumSet.copyOf(kingdom);
+            assertFalse(used.contains(asSet),
+                "Round " + (i + 1) + " produced a duplicate kingdom: " + asSet);
+            used.add(asSet);
+        }
+        assertEquals(30, used.size());
+    }
+
+    @Test
+    void selectUniqueKingdomCards_emptyUsedSetBehavesLikeRegularSelect() {
+        List<Card.Type> kingdom = RoundGenerator.selectUniqueKingdomCards(new HashSet<>());
+        assertEquals(10, kingdom.size());
+        for (Card.Type card : kingdom) {
+            assertEquals(Card.Type.Category.ACTION, card.category());
+        }
+    }
+
     // Tests for generateBalancedGames() - the core fair scheduling feature
 
     @Test
