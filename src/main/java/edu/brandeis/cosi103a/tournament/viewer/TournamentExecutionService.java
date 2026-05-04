@@ -438,7 +438,8 @@ public class TournamentExecutionService {
             .build();
 
         // Launch all probes in parallel
-        Map<String, CompletableFuture<Boolean>> probes = new LinkedHashMap<>();
+        record Probe(String url, CompletableFuture<String> future) {}
+        Map<String, Probe> probes = new LinkedHashMap<>();
         for (PlayerConfig player : players) {
             if (player.url().startsWith("classpath:")) continue;
 
@@ -449,18 +450,25 @@ public class TournamentExecutionService {
                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
                 .build();
 
-            probes.put(player.name(), httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(response -> true)
-                .exceptionally(e -> false));
+            CompletableFuture<String> future = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> (String) null)  // null = healthy
+                .exceptionally(e -> e.getClass().getSimpleName() + ": " + e.getMessage());
+            probes.put(player.name(), new Probe(player.url(), future));
         }
 
         for (var entry : probes.entrySet()) {
+            String name = entry.getKey();
+            Probe probe = entry.getValue();
             try {
-                if (!entry.getValue().get(65, TimeUnit.SECONDS)) {
-                    failed.add(entry.getKey());
+                String error = probe.future.get(65, TimeUnit.SECONDS);
+                if (error != null) {
+                    System.err.println("Health check failed: [" + name + " @ " + probe.url + "] " + error);
+                    failed.add(name);
                 }
             } catch (Exception e) {
-                failed.add(entry.getKey());
+                System.err.println("Health check failed: [" + name + " @ " + probe.url
+                    + "] wait timeout after 65s: " + e.getClass().getSimpleName());
+                failed.add(name);
             }
         }
 

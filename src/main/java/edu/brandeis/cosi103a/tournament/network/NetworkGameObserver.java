@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
  * all queued events have been delivered.
  */
 class NetworkGameObserver implements GameObserver {
+    private final String playerName;
     private final String serverUrl;
     private final String playerUuid;
     private final HttpClientWrapper httpClient;
@@ -29,7 +30,8 @@ class NetworkGameObserver implements GameObserver {
     /** Chain of pending async sends — ensures per-player event ordering. */
     private CompletableFuture<Void> eventChain = CompletableFuture.completedFuture(null);
 
-    NetworkGameObserver(String serverUrl, String playerUuid, HttpClientWrapper httpClient, ObjectMapper objectMapper) {
+    NetworkGameObserver(String playerName, String serverUrl, String playerUuid, HttpClientWrapper httpClient, ObjectMapper objectMapper) {
+        this.playerName = playerName;
         this.serverUrl = serverUrl;
         this.playerUuid = playerUuid;
         this.httpClient = httpClient;
@@ -43,7 +45,7 @@ class NetworkGameObserver implements GameObserver {
         try {
             requestJson = objectMapper.writeValueAsString(new LogEventRequest(state, event, playerUuid));
         } catch (Exception e) {
-            System.err.println("Warning: Failed to serialize event: " + e.getMessage());
+            System.err.println("Warning: [" + playerName + " @ " + serverUrl + "] Failed to serialize event: " + e.getMessage());
             return;
         }
 
@@ -59,12 +61,16 @@ class NetworkGameObserver implements GameObserver {
                 httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString())
                         .thenAccept(response -> {
                             if (response.statusCode() != 200) {
-                                System.err.println("Warning: Failed to log event. Status: "
-                                        + response.statusCode() + " - " + response.body());
+                                String body = response.body();
+                                if (body != null && body.length() > 200) body = body.substring(0, 200) + "...";
+                                System.err.println("Warning: [" + playerName + " @ " + serverUrl
+                                        + "] /log-event returned " + response.statusCode() + " - " + body);
                             }
                         })
                         .exceptionally(e -> {
-                            System.err.println("Warning: Failed to send event: " + e.getMessage());
+                            System.err.println("Warning: [" + playerName + " @ " + serverUrl
+                                    + "] /log-event request failed: " + e.getClass().getSimpleName()
+                                    + ": " + e.getMessage());
                             return null;
                         })
         );
