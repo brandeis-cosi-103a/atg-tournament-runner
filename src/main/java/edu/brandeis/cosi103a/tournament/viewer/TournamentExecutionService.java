@@ -430,8 +430,11 @@ public class TournamentExecutionService {
      */
     List<String> healthCheckPlayers(List<PlayerConfig> players) {
         List<String> failed = new ArrayList<>();
+        // Generous timeouts here: Azure Container Apps (and similar serverless
+        // hosts) cold-start can take 30s+, so don't fail a player just because
+        // their first request was slow.
         HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
+            .connectTimeout(Duration.ofSeconds(60))
             .build();
 
         // Launch all probes in parallel
@@ -442,7 +445,7 @@ public class TournamentExecutionService {
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(player.url() + "/decide"))
                 .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(5))
+                .timeout(Duration.ofSeconds(60))
                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
                 .build();
 
@@ -453,7 +456,7 @@ public class TournamentExecutionService {
 
         for (var entry : probes.entrySet()) {
             try {
-                if (!entry.getValue().get(10, TimeUnit.SECONDS)) {
+                if (!entry.getValue().get(65, TimeUnit.SECONDS)) {
                     failed.add(entry.getKey());
                 }
             } catch (Exception e) {
