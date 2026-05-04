@@ -34,6 +34,27 @@ public final class RoundGenerator {
     }
 
     /**
+     * Selects 10 random kingdom cards, retrying up to 50 times to avoid producing
+     * a kingdom that has already been used (matched as a set, ignoring order).
+     * If all attempts collide, falls back to an unrestricted selection so the
+     * tournament can still proceed.
+     *
+     * @param previouslyUsed sets of cards used in prior rounds; may be empty
+     * @return the selected 10-card kingdom
+     */
+    public static List<Card.Type> selectUniqueKingdomCards(Set<Set<Card.Type>> previouslyUsed) {
+        for (int attempt = 0; attempt < 50; attempt++) {
+            List<Card.Type> candidate = selectKingdomCards();
+            if (!previouslyUsed.contains(EnumSet.copyOf(candidate))) {
+                return candidate;
+            }
+        }
+        // Extremely unlikely with C(15,10)=3003 possible kingdoms vs ~15 rounds,
+        // but don't deadlock the tournament if it somehow happens.
+        return selectKingdomCards();
+    }
+
+    /**
      * Generates balanced 4-player games where each player plays approximately the same number of games.
      *
      * For N players requesting G games each:
