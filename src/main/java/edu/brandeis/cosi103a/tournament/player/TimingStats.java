@@ -8,5 +8,7 @@ public record TimingStats(
     int decisionCount,
     int timeoutCount,
     boolean forfeited,
-    Integer decisionAtForfeit  // null if not forfeited
+    Integer decisionAtForfeit,  // null if not forfeited
+    String forfeitReason,       // "TIME_BUDGET" | "EXCEPTION" | null when player ran cleanly
+    String lastExceptionMessage // class+message of the most recent caught exception, null if none
 ) {}

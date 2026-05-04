@@ -317,5 +317,44 @@ class TimedPlayerWrapperTest {
         assertEquals(0, initial.timeoutCount());
         assertFalse(initial.forfeited());
         assertNull(initial.decisionAtForfeit());
+        assertNull(initial.forfeitReason());
+        assertNull(initial.lastExceptionMessage());
+    }
+
+    @Test
+    void getTimingStats_exceptionOnly_reportsExceptionReasonAndMessage() {
+        ExplodingStubPlayer delegate = new ExplodingStubPlayer("ExplodingBot");
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMinutes(2));
+
+        GameState state = mock(GameState.class);
+        EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.ACTION);
+        ImmutableList<Decision> options = ImmutableList.of(endPhase);
+
+        wrapper.makeDecision(state, options, Optional.empty());
+
+        TimingStats stats = wrapper.getTimingStats();
+        assertEquals("EXCEPTION", stats.forfeitReason());
+        assertNotNull(stats.lastExceptionMessage());
+        assertTrue(stats.lastExceptionMessage().contains("RuntimeException")
+                || stats.lastExceptionMessage().contains("Exception"),
+            "Expected exception summary, got: " + stats.lastExceptionMessage());
+        assertFalse(stats.forfeited(), "Single exception should not flip the budget-exceeded flag");
+    }
+
+    @Test
+    void getTimingStats_budgetExceeded_takesPrecedenceOverException() {
+        // Use a slow + occasionally-throwing player to confirm TIME_BUDGET wins when both apply
+        SlowStubPlayer delegate = new SlowStubPlayer("SlowBot", Duration.ofMillis(60));
+        TimedPlayerWrapper wrapper = new TimedPlayerWrapper(delegate, Duration.ofMillis(50));
+
+        GameState state = mock(GameState.class);
+        EndPhaseDecision endPhase = new EndPhaseDecision(GameState.TurnPhase.ACTION);
+        ImmutableList<Decision> options = ImmutableList.of(endPhase);
+
+        wrapper.makeDecision(state, options, Optional.empty());
+
+        TimingStats stats = wrapper.getTimingStats();
+        assertTrue(stats.forfeited());
+        assertEquals("TIME_BUDGET", stats.forfeitReason());
     }
 }

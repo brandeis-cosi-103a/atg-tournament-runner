@@ -41,6 +41,7 @@ public class TimedPlayerWrapper implements Player {
     private int timeoutCount = 0;
     private boolean forfeited = false;
     private Integer decisionAtForfeit = null;
+    private String lastExceptionMessage = null;
 
     /**
      * Creates a new TimedPlayerWrapper.
@@ -82,9 +83,19 @@ public class TimedPlayerWrapper implements Player {
             // Delegate failed (HTTP timeout, network error, player bug, etc.)
             totalDecisionTimeMs += httpElapsedMs(startNanos);
             timeoutCount++;
+            lastExceptionMessage = summarizeException(e);
             checkBudgetExceeded();
             return forfeitDecision(options);
         }
+    }
+
+    private static String summarizeException(Exception e) {
+        String msg = e.getMessage();
+        String summary = e.getClass().getSimpleName() + (msg != null ? ": " + msg : "");
+        if (summary.length() > 300) {
+            summary = summary.substring(0, 297) + "...";
+        }
+        return summary;
     }
 
     /**
@@ -139,6 +150,16 @@ public class TimedPlayerWrapper implements Player {
      * Returns a snapshot of the current timing statistics.
      */
     public TimingStats getTimingStats() {
-        return new TimingStats(totalDecisionTimeMs, decisionCount, timeoutCount, forfeited, decisionAtForfeit);
+        String reason;
+        if (forfeited) {
+            reason = "TIME_BUDGET";
+        } else if (timeoutCount > 0) {
+            reason = "EXCEPTION";
+        } else {
+            reason = null;
+        }
+        return new TimingStats(
+            totalDecisionTimeMs, decisionCount, timeoutCount, forfeited, decisionAtForfeit,
+            reason, lastExceptionMessage);
     }
 }
