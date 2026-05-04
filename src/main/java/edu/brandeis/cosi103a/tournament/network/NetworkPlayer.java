@@ -65,7 +65,7 @@ public class NetworkPlayer implements Player {
         this.httpClient = new HttpClientWrapper.Default();
         this.objectMapper = ObjectMapperFactory.create();
         this.requestTimeout = requestTimeout;
-        this.observer = new NetworkGameObserver(this.serverUrl, this.playerUuid, this.httpClient, this.objectMapper);
+        this.observer = new NetworkGameObserver(this.name, this.serverUrl, this.playerUuid, this.httpClient, this.objectMapper);
     }
 
     /**
@@ -78,7 +78,7 @@ public class NetworkPlayer implements Player {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
         this.requestTimeout = null;
-        this.observer = new NetworkGameObserver(this.serverUrl, this.playerUuid, this.httpClient, this.objectMapper);
+        this.observer = new NetworkGameObserver(this.name, this.serverUrl, this.playerUuid, this.httpClient, this.objectMapper);
     }
 
     @Override

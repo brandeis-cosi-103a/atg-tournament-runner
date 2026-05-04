@@ -89,11 +89,25 @@ public class TimedPlayerWrapper implements Player {
         }
     }
 
-    private static String summarizeException(Exception e) {
-        String msg = e.getMessage();
-        String summary = e.getClass().getSimpleName() + (msg != null ? ": " + msg : "");
-        if (summary.length() > 300) {
-            summary = summary.substring(0, 297) + "...";
+    private static String summarizeException(Throwable e) {
+        // Walk the full cause chain. NetworkPlayer wraps every failure in a
+        // generic "Failed to get decision" RuntimeException, so the underlying
+        // HttpTimeoutException / ConnectException / "Server returned error: 500 - ..."
+        // is the part we actually want to see.
+        StringBuilder sb = new StringBuilder();
+        Throwable cur = e;
+        int depth = 0;
+        while (cur != null && depth < 5) {
+            if (depth > 0) sb.append(" | caused by ");
+            String msg = cur.getMessage();
+            sb.append(cur.getClass().getSimpleName());
+            if (msg != null) sb.append(": ").append(msg);
+            cur = cur.getCause();
+            depth++;
+        }
+        String summary = sb.toString();
+        if (summary.length() > 500) {
+            summary = summary.substring(0, 497) + "...";
         }
         return summary;
     }
