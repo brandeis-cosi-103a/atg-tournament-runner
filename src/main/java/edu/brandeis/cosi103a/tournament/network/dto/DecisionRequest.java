@@ -1,5 +1,6 @@
 package edu.brandeis.cosi103a.tournament.network.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import edu.brandeis.cosi.atg.decisions.Decision;
 import edu.brandeis.cosi.atg.event.Event;
@@ -15,6 +16,9 @@ public class DecisionRequest {
     private GameState state;
     private ImmutableList<Decision> options;
     private Optional<Event> reason;
+    // The assignment spec uses snake_case "player_uuid"; keep the Java
+    // identifier camelCase but emit/read the spec-compliant JSON key.
+    @JsonProperty("player_uuid")
     private String playerUuid;
 
     /**

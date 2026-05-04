@@ -1,5 +1,6 @@
 package edu.brandeis.cosi103a.tournament.network.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import edu.brandeis.cosi.atg.event.Event;
 import edu.brandeis.cosi.atg.state.GameState;
 
@@ -10,6 +11,9 @@ import edu.brandeis.cosi.atg.state.GameState;
 public class LogEventRequest {
     private GameState state;
     private Event event;
+    // The assignment spec uses snake_case "player_uuid"; keep the Java
+    // identifier camelCase but emit/read the spec-compliant JSON key.
+    @JsonProperty("player_uuid")
     private String playerUuid;
 
     /**
